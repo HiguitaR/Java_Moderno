@@ -1,7 +1,7 @@
 # ***PARTE 1***
 
 
-### *Procesamiento de Streams (Flujos)*
+## *Procesamiento de Streams (Flujos)*
 
     El primer concepto de programación es el procesamiento de streams. Para propósitos introductorios, 
     un stream (flujo) es una secuencia de elementos de datos que conceptualmente se producen uno a la 
@@ -16,38 +16,81 @@
     stream. La línea de comandos de Unix permite que tales programas se conecten entre sí con tuberías 
     (pipes, |), dando ejemplos como:
 
-    ```text
-    cat file1 file2 | tr "[A-Z]" "[a-z]" | sort | tail -3
-    ```
+```text
+cat file1 file2 | tr "[A-Z]" "[a-z]" | sort | tail -3
+```
 
-    - El cual (suponiendo que file1 y file2 contienen una sola palabra por línea) imprime las tres 
-        palabras de los archivos que aparecen últimas en orden alfabético, después de haberlas traducido 
-        primero a minúsculas.
+    El cual (suponiendo que file1 y file2 contienen una sola palabra por línea) imprime las tres 
+    palabras de los archivos que aparecen últimas en orden alfabético, después de haberlas traducido 
+    primero a minúsculas.
     
-        Decimos que sort toma un stream de líneas$^3$ como entrada y produce otro stream de líneas como 
-        salida (este último ordenado), como se ilustra en la figura 1.2.
+    Decimos que sort toma un stream de líneas$^3$ como entrada y produce otro stream de líneas como 
+    salida (este último ordenado), como se ilustra en la figura 1.2.
     
-        Nótese que en Unix, estos comandos (cat, tr, sort y tail) se ejecutan concurrentemente, de modo 
-        que sort puede estar procesando las primeras líneas antes de que cat o tr hayan terminado.
+    Nótese que en Unix, estos comandos (cat, tr, sort y tail) se ejecutan concurrentemente, de modo 
+    que sort puede estar procesando las primeras líneas antes de que cat o tr hayan terminado.
     
-        Una analogía más mecánica es la de una cadena de montaje de automóviles donde un flujo de coches se 
-        pone en cola entre estaciones de procesamiento, y cada una toma un coche, lo modifica y lo pasa a 
-        la siguiente estación para un procesamiento posterior. El procesamiento en estaciones separadas es 
-        típicamente concurrente, aunque la cadena de montaje sea físicamente una secuencia.
+    Una analogía más mecánica es la de una cadena de montaje de automóviles donde un flujo de coches se 
+    pone en cola entre estaciones de procesamiento, y cada una toma un coche, lo modifica y lo pasa a 
+    la siguiente estación para un procesamiento posterior. El procesamiento en estaciones separadas es 
+    típicamente concurrente, aunque la cadena de montaje sea físicamente una secuencia.
     
-        Java 8 añade una API de Streams (nótese la 'S' mayúscula) en java.util.stream basándose en esta 
-        idea; un Stream<T> es una secuencia de elementos de tipo T. Por ahora, se puede considerar como un 
-        iterador avanzado. La API de Streams tiene muchos métodos que se pueden encadenar para formar un 
-        pipeline complejo, tal como se encadenaban los comandos de Unix en el ejemplo anterior.
+    Java 8 añade una API de Streams (nótese la 'S' mayúscula) en java.util.stream basándose en esta 
+    idea; un Stream<T> es una secuencia de elementos de tipo T. Por ahora, se puede considerar como un 
+    iterador avanzado. La API de Streams tiene muchos métodos que se pueden encadenar para formar un 
+    pipeline complejo, tal como se encadenaban los comandos de Unix en el ejemplo anterior.
     
-        La motivación clave para esto es que ahora puedes programar en Java 8 con un nivel de abstracción 
-        más alto, estructurando tus pensamientos en cómo convertir un stream de esto en un stream de aquello
-        (similar a cómo piensas al escribir consultas a bases de datos), en lugar de procesar un elemento a
-        la vez.
+    La motivación clave para esto es que ahora puedes programar en Java 8 con un nivel de abstracción 
+    más alto, estructurando tus pensamientos en cómo convertir un stream de esto en un stream de aquello
+    (similar a cómo piensas al escribir consultas a bases de datos), en lugar de procesar un elemento a
+    la vez.
         
-        Otra ventaja es que Java 8 puede ejecutar de manera transparente tu pipeline de operaciones de 
-        Stream en varios núcleos de CPU sobre partes disjuntas de la entrada: esto es paralelismo casi 
-        gratuito en lugar del arduo trabajo que implica usar Threads (hilos). Cubriremos la API de Streams 
-        de Java 8 en detalle en los capítulos 4 a 7.
+    Otra ventaja es que Java 8 puede ejecutar de manera transparente tu pipeline de operaciones de 
+    Stream en varios núcleos de CPU sobre partes disjuntas de la entrada: esto es paralelismo casi 
+    gratuito en lugar del arduo trabajo que implica usar Threads (hilos). Cubriremos la API de Streams 
+    de Java 8 en detalle en los capítulos 4 a 7.
+
+### *Pasar código a métodos con behavior parameterization (Parametrización de Comportamiento)*
+
+    El segundo concepto de programación añadido a Java 8 es la capacidad de pasar un fragmento de 
+    código a una API. Esto suena terriblemente abstracto.
+
+    En el ejemplo de Unix, podrías querer indicarle al comando sort que utilice un ordenamiento 
+    personalizado. Aunque el comando sort admite parámetros de línea de comandos para realizar 
+    varios tipos de ordenamiento predefinidos, como el orden inverso, estos son limitados.
+
+    Por ejemplo, digamos que tienes una colección de IDs de factura con un formato similar a 
+    2013UK0001, 2014US0002, y así sucesivamente. Los primeros cuatro dígitos representan el año, 
+    las siguientes dos letras un código de país, y los últimos cuatro dígitos el ID de un cliente.
+    Podrías querer ordenar estos IDs de factura por año, o quizás usando el ID del cliente, o 
+    incluso el código del país.
+
+    Lo que realmente se desea es la capacidad de indicarle al comando sort que tome como argumento 
+    un ordenamiento definido por el usuario: un fragmento de código separado pasado al comando sort.
+
+    Ahora, como paralelo directo en Java, quieres indicarle a un método sort que compare usando un 
+    orden personalizado. Podrías escribir un método compareUsingCustomerId para comparar dos IDs de
+    factura, pero, antes de Java 8, ¡no podías pasar este método a otro método!
+
+    Podrías crear un objeto Comparator para pasarlo al método sort, como mostramos al comienzo de 
+    este capítulo, pero esto es verboso y oscurece la idea de simplemente reutilizar una pieza de 
+    comportamiento existente.
+
+    Java 8 añade la capacidad de pasar métodos (tu código) como argumentos a otros métodos. 
+    La Figura 1.3, basada en la figura 1.2, ilustra esta idea. También nos referimos a esto 
+    conceptualmente como parametrización de comportamiento (behavior parameterization). 
+    ¿Por qué es esto importante? La API de Streams se basa en la idea de pasar código para 
+    parametrizar el comportamiento de sus operaciones, justo como pasaste compareUsingCustomerId 
+    para parametrizar el comportamiento de sort.
+
+```java
+public int compareUsingCustomerId(String inv1, String inv2){}
+```
+
+    Resumimos cómo funciona esto en la sección 1.3 de este capítulo, pero dejamos los detalles 
+    completos para los capítulos 2 y 3. Los capítulos 18 y 19 analizan cosas más avanzadas que 
+    puedes hacer utilizando esta característica, con técnicas provenientes de la comunidad de la 
+    programación funcional.
+
 
 
