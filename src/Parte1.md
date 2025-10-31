@@ -197,3 +197,217 @@ public int compareUsingCustomerId(String inv1, String inv2){}
     también podría ser una buena idea. Varios lenguajes como Smalltalk y JavaScript han explorado 
     este camino.
 
+### **Métodos y lambdas como ciudadanos de primera clase**
+
+    Experimentos en otros lenguajes, como Scala y Groovy, han demostrado que permitir que conceptos como
+    los métodos se utilicen como valores de primera clase facilita la programación al ampliar el 
+    conjunto de herramientas disponibles para los programadores. Y una vez que los programadores se 
+    familiarizan con una característica potente, se muestran reacios a usar lenguajes que no la incluyen.
+    Los diseñadores de Java 8 decidieron permitir que los métodos fueran valores, con el fin de facilitar
+    la programación. Además, la característica de Java 8 que trata a los métodos como valores constituye
+    la base de varias otras funcionalidades de Java 8 (como Streams).
+    
+    La primera característica nueva de Java 8 que presentamos es la de las referencias a métodos. 
+    Supongamos que deseas filtrar todos los archivos ocultos en un directorio. Necesitas escribir un 
+    método que, dado un objeto File, te indique si está oculto. Afortunadamente, existe tal método en la
+    clase File llamado isHidden. Este puede verse como una función que toma un File y devuelve un boolean.
+    Pero para usarlo en un filtro, necesitas envolverlo en un objeto FileFilter, que luego pasas al 
+    método File.listFiles, de la siguiente manera:
+
+```java
+File[] hiddenFilter = new File(".").listFiles(new FileFilter() {
+    public boolean accept(File file) {
+        return file.isHidden();    //<-- Filtering hidden files!
+    }
+});
+```
+
+    ¡Uf! Eso es horrible. Aunque solo son tres líneas importantes, son tres líneas opacas: todos 
+    recordamos habernos preguntado "¿Realmente tengo que hacerlo así?" al encontrarlo por primera vez.
+    Ya tienes el método isHidden que podrías usar. ¿Por qué tienes que envolverlo en una clase 
+    FileFilter tan verbosa y luego instanciarla? Porque eso era lo que tenías que hacer antes de Java 8.
+
+    Ahora, puedes reescribir ese código de la siguiente manera:
+
+```java
+File[] hiddenFiles = new File(".").listFiles(File::isHidden);
+```
+
+    ¡Vaya! ¿No es genial? Ya tienes disponible la función isHidden, así que la pasas al método listFiles
+    usando la sintaxis :: de referencias a métodos de Java 8 (que significa "usa este método como 
+    un valor"); nótese que también hemos empezado a usar la palabra función para referirnos a métodos.
+    Explicaremos más adelante cómo funciona mecánicamente.
+
+    Una ventaja es que tu código ahora se lee más parecido al enunciado del problema.
+
+    Aquí tienes un adelanto de lo que viene: los métodos ya no son valores de segunda clase. Análogo
+    a usar una referencia de objeto cuando pasas un objeto (y las referencias de objeto se crean con new),
+    en Java 8, cuando escribes File::isHidden, creas una referencia a un método, que puede pasarse 
+    de forma similar. Este concepto se analiza en detalle en el capítulo 3. Dado que los métodos 
+    contienen código (el cuerpo ejecutable de un método), el uso de referencias a métodos permite 
+    pasar código como valor, como se muestra en la figura 1.3. La figura 1.4 ilustra el concepto. 
+    Verás un ejemplo concreto (seleccionar manzanas de un inventario) en la siguiente sección.
+
+###   **Lambdas: Funciones Anonimas**
+    Además de permitir que los métodos (nombrados) sean valores de primera clase, Java 8 introduce 
+    un concepto más rico: las funciones como valores, incluyendo lambdas (o funciones anónimas). Por
+    ejemplo, puedes escribir (int x) -> x + 1 para expresar "la función que, al recibir un argumento 
+    x, devuelve x + 1".
+
+    Podrías preguntarte por qué es necesario, ya que podrías definir un método add1 en una clase 
+    MyMathsUtils y usar MyMathsUtils::add1. Sí, es posible, pero la sintaxis lambda es más concisa 
+    cuando no tienes un método o clase útil disponible.
+
+    Los programas que usan estos conceptos se consideran escritos en estilo de programación funcional,
+    lo que significa "escribir programas que pasan funciones como valores de primera clase".
+
+```java
+//Old way of filtering hidden files
+File[] hiddenFiles = new File(".").listFiles(new FileFilter() {
+            public boolean accept(File file) {
+                return file.isHidden();
+            }  //Filtering files with the isHidden method requires wrapping the method inside a FileFilter
+                //object before passing it to the File.listFiles method.
+        });
+
+//Java 8 style
+File[] hiddenFiles = new File(".").listFiles(File::isHidden);
+// In Java 8 you can pass the isHidden function to the listFiles method using the method reference :: syntax.
+```
+
+### **Pasar código: un ejemplo**
+    Veamos un ejemplo de cómo esto te ayuda a escribir programas (analizado con más detalle en el 
+    capítulo 2). Todo el código de los ejemplos está disponible en un repositorio de GitHub y como 
+    descarga desde la página web del libro. Ambos enlaces se pueden encontrar en www.manning.com/books/modern-java-in-action.
+
+    Supón que tienes una clase Apple con un método getColor y una variable inventory que contiene 
+    una lista de manzanas. Quizás quieras seleccionar todas las manzanas verdes (usando un tipo enum
+    Color que incluye los valores GREEN y RED) y devolverlas en una lista. La palabra filter (filtrar)
+    se usa comúnmente para expresar este concepto.
+
+    Antes de Java 8, podrías escribir un método como filterGreenApples:
+
+```java
+public static List<Apple> filterGreenApples(List<Apple> inventory) {
+    List<Apple> result = new ArrayList<>();  // The result list accumulates the result; it starts as empty, and then green apples are added one by one.
+    for (Apple apple : inventory) {
+        if (GREEN.equals(apple.getColor())) {  // This line text selects only green apples.
+            result.add(apple);
+        }
+        return result;
+    }
+}
+```
+
+    Pero luego, alguien querría la lista de manzanas pesadas (por ejemplo, más de 150 g), y entonces,
+    con pesar, escribirías el siguiente método para lograrlo (quizás incluso usando copiar y pegar):
+
+```java
+public static List<Apple> filterHeavyApples(List<Apple> inventory) {
+    List<Apple> result = new ArrayList<>();
+    for (Apple apple : inventory) {
+        if (apple.getWeight() > 150) {  // This line text selects only heavy apples.
+            result.add(apple);
+        }
+    }
+    return result;
+}
+```
+
+    Todos conocemos los peligros del copiar y pegar en ingeniería de software (actualizaciones y 
+    correcciones de errores aplicadas a una variante pero no a otra). Además, estos dos métodos solo
+    difieren en una línea: la condición resaltada dentro del if. Si la diferencia entre las llamadas 
+    a los métodos hubiera sido el rango de peso aceptable, podrías haber pasado como argumentos los
+    límites inferior y superior al filtro (por ejemplo, (150, 1000) para seleccionar manzanas pesadas 
+    o (0, 80) para manzanas ligeras).
+
+    Pero como mencionamos antes, Java 8 permite pasar el código de la condición como argumento, evitando
+    así la duplicación del método filter. Ahora puedes escribir:
+
+```java
+public static boolean isGreenApple(Apple apple) {
+    return GREEN.equals(apple.getColor());
+}
+public static boolean isHeavyApple(Apple apple) {
+    return apple.getWeight() > 150;
+}
+public interface Predicate<T>{  // Included for clarity (normally imported from java.util.function)
+    boolean test(T t);
+}
+static List<Apple> filterApples(List<Apple> inventory, Predicate<Apple> p) { // A method is passed as a Predicate parameter named p (see the sidebar “What’s a Predicate?”).
+    List<Apple> result = new ArrayList<>();
+    for (Apple apple: inventory){
+        if (p.test(apple)) {  // Does the apple match the condition represented by p?
+            result.add(apple);
+        }
+    }
+    return result;
+}
+
+```
+
+    Y para usarlo, llamas a cualquiera de los siguientes:
+
+```java
+filterApples(inventory, Apple::isGreenApple);
+//or
+filterApples(inventory, Apple::isHeavyApple);
+```
+
+    Nosotros explicamos cómo funciona esto en detalle en los próximos dos capítulos. La idea clave 
+    que debes tener en cuenta por ahora es que puedes pasar un método como si fuera un valor en Java 8.
+
+    ¿Qué es un Predicate?
+    El código anterior pasó un método Apple::isGreenApple (que recibe una Apple como argumento y 
+    devuelve un boolean) al método filterApples, que esperaba un parámetro de tipo Predicate<Apple>.
+    La palabra predicate (predicado) se usa a menudo en matemáticas para referirse a algo similar a 
+    una función que toma un valor como argumento y devuelve true o false. Como verás más adelante, 
+    Java 8 también te permitiría escribir Function<Apple, Boolean> —algo más familiar para quienes 
+    aprendieron sobre funciones pero no sobre predicados en la escuela—, pero usar Predicate<Apple> 
+    es más estándar (y ligeramente más eficiente porque evita el boxing de un boolean en un Boolean).
+
+
+### **De pasar métodos a lambdas**
+    Pasar métodos como valores es claramente útil, pero es molesto tener que escribir una definición
+    para métodos cortos como isHeavyApple e isGreenApple cuando se usan quizás solo una o dos veces.
+    Pero Java 8 también ha resuelto esto. Introduce una nueva notación (funciones anónimas, o lambdas)
+    que te permite escribir simplemente
+```java
+filterApples(inventory, (Apple a) -> GREEN.equals(a.getColor()) );
+//or
+filterApples(inventory, (Apple a) -> a.getWeight() > 150 );
+//or even
+filterApples(inventory, (Apple a) -> a.getWeight() < 80 ||RED.equals(a.getColor()) );
+```
+
+    Ni siquiera necesitas escribir una definición de método que se use solo una vez; el código es más
+    claro y conciso porque no tienes que buscar dónde está definido el código que estás pasando.
+
+    Pero si una lambda supera unas pocas líneas de longitud (de modo que su comportamiento no sea 
+    inmediatamente claro), deberías usar mejor una referencia a un método con un nombre descriptivo,
+    en lugar de una lambda anónima. La claridad del código debe ser tu guía.
+
+    Los diseñadores de Java 8 casi podrían haber terminado aquí, y quizás lo habrían hecho si no fuera
+    por las CPU multinúcleo. La programación en estilo funcional, tal como se ha presentado hasta ahora,
+    resulta ser muy poderosa, como verás. Java podría haberse completado simplemente añadiendo métodos
+    genéricos como filter y algunos similares en sus bibliotecas.
+
+```java
+static <T> Collection<T> filter(Collection<T> c, Predicate<T> p);
+```
+    Ni siquiera tendrías que escribir métodos como filterApples, porque, por ejemplo, la llamada 
+    anterior
+```java
+filterApples(inventory, (Apple a) -> a.getWeight() > 150 );
+```
+    podría escribirse como una llamada al método de biblioteca filter:
+```java
+filter(inventory, (Apple a) -> a.getWeight() > 150 );
+```
+    Pero, por razones relacionadas con aprovechar mejor el paralelismo, los diseñadores no hicieron 
+    esto. En su lugar, Java 8 incluye una nueva API similar a las colecciones llamada Stream, que 
+    contiene un conjunto completo de operaciones similares a filter (como map y reduce), conocidas 
+    por programadores funcionales, junto con métodos para convertir entre colecciones y streams, que
+    ahora exploraremos.
+
+### **Streams**
