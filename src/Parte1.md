@@ -92,5 +92,108 @@ public int compareUsingCustomerId(String inv1, String inv2){}
     puedes hacer utilizando esta característica, con técnicas provenientes de la comunidad de la 
     programación funcional.
 
+### **Paralelismo y datos mutables compartidos**
 
+    El tercer concepto de programación es bastante más implícito y surge de la frase "paralelismo 
+    casi gratis" en nuestra discusión anterior sobre el procesamiento de flujos (streams). ¿A qué 
+    tienes que renunciar? Puede que tengas que hacer algunos pequeños cambios en la forma en que 
+    codificas el comportamiento que pasas a los métodos de los flujos. Al principio, estos cambios 
+    pueden parecer un poco incómodos, pero una vez que te acostumbres a ellos, te encantarán. Debes
+    proporcionar un comportamiento que sea seguro para ejecutar de forma concurrente en diferentes 
+    partes de la entrada. Normalmente, esto significa escribir código que no accede a datos mutables
+    compartidos para hacer su trabajo. A veces, a estas se les denomina funciones puras o funciones 
+    sin efectos secundarios o funciones sin estado, y las discutiremos en detalle en los capítulos 
+    18 y 18 y 19. El paralelismo anterior surge solo al suponer que múltiples copias de tu fragmento
+    de código pueden funcionar de forma independiente. Si hay una variable u objeto compartido en el
+    que se escribe, entonces las cosas ya no funcionan. ¿Qué pasa si dos procesos quieren modificar 
+    la variable compartida al mismo tiempo? (La Sección 1.4 ofrece una explicación más detallada con
+    un diagrama). Encontrarás más sobre este estilo a lo largo del libro.
+    Los flujos de Java 8 explotan el paralelismo más fácilmente que la API de hilos (Threads) 
+    existente de Java, por lo que, aunque es possible usar synchronized para romper la regla de no 
+    tener datos mutables compartidos, es ir en contra del sistema, ya que abusa de una abstracción 
+    optimizada en torno a esa regla. Usar synchronized en múltiples núcleos de procesamiento suele 
+    ser mucho más costoso de lo que esperas, porque la sincronización obliga a que el código se 
+    ejecute secuencialmente, lo que va en contra del objetivo del paralelismo.
+    Dos de estos puntos (no tener datos mutables compartidos y la capacidad de pasar métodos y 
+    funciones —código— a otros métodos) son las piedras angulares de lo que generalmente se describe
+    como el paradigma de la programación funcional, que verás en detalle en los capítulos 18 y 19. 
+    En contraste, en el paradigma de la programación imperativa, normalmente describes un programa 
+    en términos de una secuencia de sentencias que mutan el estado. El requisito de no tener datos 
+    mutables compartidos significa que un método se describe perfectamente solo por la forma en que 
+    transforma los argumentos en resultados; en otras palabras, se comporta como una función 
+    matemática y no tiene efectos secundarios (visibles).
+
+### **Java necesita evolucionar**
+
+    Ya has visto la evolución en Java antes. Por ejemplo, la introducción de genéricos y el uso de 
+    List<String> en lugar de solo List pudo haber sido inicialmente irritante. Pero ahora estás 
+    familiarizado con este estilo y los beneficios que aporta (detectar más errores en tiempo de 
+    compilación y hacer el código más fácil de leer, porque ahora sabes de qué es una lista).
+    
+    Otros cambios han facilitado la expresión de cosas comunes (por ejemplo, usar un bucle for-each
+    en lugar de exponer el código repetitivo del uso de un Iterator). Los principales cambios en 
+    Java 8 reflejan un movimiento que se aleja de la orientación a objetos clásica, que a menudo se 
+    centra en mutar valores existentes, y se dirige hacia el espectro de la programación de estilo 
+    funcional, en la que lo que quieres hacer en términos generales (por ejemplo, crear un valor que
+    represente todas las rutas de transporte de A a B por menos de un precio dado) se considera 
+    primordial y se separa de cómo puedes lograrlo (por ejemplo, escanear una estructura de datos 
+    modificando ciertos componentes). Ten en cuenta que la programación orientada a objetos clásica
+    y la programación funcional, como extremos, podrían parecer estar en conflicto. Pero la idea es 
+    obtener lo mejor de ambos paradigmas de programación, para que tengas una mejor oportunidad de 
+    tener la herramienta adecuada para el trabajo. Discutiremos esto en detalle en las secciones 
+    1.3 y 1.4.
+    
+    Una frase clave podría ser esta: los lenguajes necesitan evolucionar para seguir el ritmo de los
+    cambios en el hardware o en las expectativas de los programadores (si necesitas convencerte, 
+    considera que COBOL fue en su día uno de los lenguajes más importantes comercialmente). Para 
+    perdurar, Java tiene que evolucionar añadiendo nuevas características. Esta evolución no tendrá 
+    sentido a menos que se utilicen las nuevas características, por lo que al usar Java 8 estás 
+    protegiendo tu forma de vida como programador Java.
+    
+    Además de eso, tenemos la sensación de que te encantará usar las nuevas características de Java 
+    8. ¡Pregúntale a cualquiera que haya usado Java 8 si está dispuesto a volver atrás! Además, las 
+    nuevas características de Java 8 12 CAPÍTULO 1 Java 8, 9, 10 y 11: ¿Qué está pasando? podrían, en
+    la analogía del ecosistema, permitir que Java conquiste territorio de tareas de programación 
+    actualmente ocupado por otros lenguajes, por lo que los programadores de Java 8 estarán aún más 
+    demandados.
+    Ahora presentaremos los nuevos conceptos en Java 8, uno por uno, señalando los capítulos que 
+    cubren estos conceptos con más detalle.
+
+### **Funciones en Java**
+
+    La palabra función en los lenguajes de programación se usa comúnmente como sinónimo de método, 
+    particularmente de un método estático; esto se suma a su uso para función matemática, aquella 
+    sin efectos secundarios. Afortunadamente, como verás, cuando Java 8 se refiere a funciones, 
+    estos usos casi coinciden.
+    
+    Java 8 añade funciones como nuevas formas de valor. Esto facilita el uso de streams (flujos), 
+    cubiertos en la sección 1.4, que Java 8 proporciona para explotar la programación paralela en 
+    procesadores multinúcleo. Comenzaremos mostrando que las funciones como valores son útiles por 
+    sí mismas.
+    
+    Piensa en los posibles valores que manipulan los programas Java. En primer lugar, hay valores 
+    primitivos como 42 (de tipo int) y 3.14 (de tipo double). En segundo lugar, los valores pueden 
+    ser objetos (más estrictamente, referencias a objetos). La única forma de obtener uno de estos 
+    es usando new, quizás a través de un método factory o una función de biblioteca; las referencias
+    a objetos apuntan a instancias de una clase. Los ejemplos incluyen "abc" (de tipo String), new 
+    Integer(1111) (de tipo Integer) y el resultado new HashMap<Integer, String>(100) de llamar 
+    explícitamente a un constructor para HashMap. Incluso los arrays (arreglos) son objetos. ¿Cuál 
+    es el problema?
+    
+    Para ayudar a responder esto, notaremos que el objetivo principal de un lenguaje de programación
+    es manipular valores, que, siguiendo la tradición histórica de los lenguajes de programación, se
+    denominan por lo tanto valores de primera clase (o ciudadanos, en la terminología tomada del 
+    movimiento de derechos civiles de los años 60 en Estados Unidos). Otras estructuras en nuestros 
+    lenguajes de programación, que tal vez nos ayuden a expresar la estructura de los valores pero 
+    que no pueden pasarse durante la ejecución del programa, son ciudadanos de segunda clase. Los 
+    valores enumerados anteriormente son ciudadanos Java de primera clase, pero otros conceptos de 
+    Java, como métodos y clases, ejemplifican los ciudadanos de segunda clase. Los métodos están 
+    bien cuando se usan para definir clases, que a su vez pueden ser instanciadas para producir 
+    valores, pero ni los métodos ni las clases son valores en sí mismos. ¿Importa esto? Sí, resulta 
+    que poder pasar métodos durante el tiempo de ejecución, y por lo tanto convertirlos en 
+    ciudadanos de primera clase, es útil en la programación, por lo que los diseñadores de Java 8 
+    agregaron la capacidad de expresar esto directamente en Java. Por cierto, podrías preguntarte si
+    convertir a otros ciudadanos de segunda clase, como las clases, en valores de primera clase 
+    también podría ser una buena idea. Varios lenguajes como Smalltalk y JavaScript han explorado 
+    este camino.
 
