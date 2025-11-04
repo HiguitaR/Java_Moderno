@@ -411,3 +411,69 @@ filter(inventory, (Apple a) -> a.getWeight() > 150 );
     ahora exploraremos.
 
 ### **Streams**
+    Nearly every Java application makes and processes collections. But working with collec-tions 
+    isn’t always ideal. For example, let’s say you need to filter expensive transactionsfrom a list
+    and then group them by currency. You’d need to write a lot of boilerplate code to implement 
+    this data-processing query, as shown here:
+
+```java
+    // Creates the Map where the grouped transaction will be accumulated
+Map<Currency, List<Transaction>> transactionsByCurrencies = new HashMap<>();
+for (Transaction transaction : transactions){  //Iterates the List of transactions
+        if(transaction.getPrice() >1000){  //Filters expensive transactions
+            Currency currency = transaction.getCurrency();  //Extracts the transaction’s currency
+            List<Transaction> transactionsForCurrency = transactionsByCurrencies.get(currency);
+            if(transactionsForCurrency ==null){  //If there isn't an entry in the grouping Map for this currency create it
+                transactionsForCurrency =new ArrayList<>();
+                transactionsByCurrencies.put(currency, transactionsForCurrency);
+            }
+            transactionsForCurrency.add(transaction);  //Adds the currently traversed transaction to the List of transactions with the same currency
+        }
+}
+```
+
+    Además, es difícil entender de un vistazo qué hace el código debido a las múltiples sentencias 
+    anidadas de control de flujo. Usando la API de Streams, puedes resolver este problema de la 
+    siguiente manera:
+
+```java
+import static java.util.stream.Collectors.groupingBy;
+Map<Currency, List<Transaction>> transactionsByCurrencies =
+    transactions.stream()
+        .filter((Transaction t) -> t.getPrice() > 1000)  // Filters expensive transactions
+        .collect(groupingBy(Transaction::getCurrency));  // Groups them by currency
+```
+
+    No te preocupes por este código por ahora, porque puede parecer un poco mágico. Los capítulos 4 
+    a 7 están dedicados a explicar cómo entender la API de Streams. Por ahora, es importante notar 
+    que la API de Streams ofrece una forma diferente de procesar datos en comparación con la API de 
+    Colecciones. Al usar una colección, tú gestionas el proceso de iteración manualmente: debes 
+    recorrer los elementos uno por uno con un bucle for-each y procesarlos secuencialmente. A esto 
+    se llama iteración externa. En cambio, al usar la API de Streams, no necesitas pensar en bucles:
+    el procesamiento ocurre internamente dentro de la biblioteca. A esto se llama iteración interna.
+    Volveremos a estos conceptos en el capítulo 4.
+
+    Como segundo problema al trabajar con colecciones, piensa por un momento en cómo procesarías la 
+    lista de transacciones si tuvieras una cantidad muy grande; ¿cómo podrías procesar esta enorme 
+    lista? Una sola CPU no podría manejar esa cantidad de datos, pero probablemente tienes una 
+    computadora con múltiples núcleos. Idealmente, querrías distribuir el trabajo entre los diferentes 
+    núcleos disponibles para reducir el tiempo de procesamiento. En teoría, si tienes ocho núcleos, 
+    deberían poder procesar los datos ocho veces más rápido que con un solo núcleo, ya que trabajan 
+    en paralelo.
+
+### **Ordenadores multinúcleo**
+    Todos los ordenadores de sobremesa y portátiles nuevos son ordenadores multinúcleo. En lugar de 
+    tener una sola CPU, cuentan con cuatro, ocho o más CPUs (normalmente llamadas núcleos). El 
+    problema es que un programa clásico en Java utiliza solo uno de estos núcleos, desperdiciando el
+    potencial de los demás. De forma similar, muchas empresas usan clústeres informáticos
+    (computadoras conectadas entre sí mediante redes rápidas) para procesar grandes cantidades de 
+    datos de forma eficiente. Java 8 facilita nuevos estilos de programación que permiten aprovechar
+    mejor este tipo de hardware.
+
+    El motor de búsqueda de Google es un ejemplo de un programa demasiado grande para ejecutarse en 
+    un solo ordenador. Lee cada página de internet y crea un índice que asocia cada palabra que 
+    aparece en cualquier página web con todas las URL que contienen esa palabra. Luego, cuando 
+    realizas una búsqueda en Google con varias palabras, el software usa este índice para mostrarte 
+    rápidamente un conjunto de páginas web que contienen dichas palabras. Intenta imaginar cómo 
+    codificarías este algoritmo en Java (incluso para un índice más pequeño que el de Google, 
+    necesitarías aprovechar todos los núcleos de tu computadora).
