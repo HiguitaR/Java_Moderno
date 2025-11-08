@@ -477,3 +477,245 @@ Map<Currency, List<Transaction>> transactionsByCurrencies =
     rápidamente un conjunto de páginas web que contienen dichas palabras. Intenta imaginar cómo 
     codificarías este algoritmo en Java (incluso para un índice más pequeño que el de Google, 
     necesitarías aprovechar todos los núcleos de tu computadora).
+
+### **El multihilos es difícil**
+    El problema es que aprovechar el paralelismo escribiendo código multihilo (usando la API de hilos
+    de versiones anteriores de Java) es difícil. Tienes que pensar de forma diferente: los hilos 
+    pueden acceder y actualizar variables compartidas al mismo tiempo. Como resultado, los datos 
+    podrían cambiar inesperadamente si no se coordinan adecuadamente. Este modelo es más difícil de 
+    entender que un modelo secuencial paso a paso. Por ejemplo, la figura 1.5 muestra un posible 
+    problema con dos hilos intentando añadir un número a una variable compartida sum si no están 
+    sincronizados correctamente.
+
+    Java 8 aborda ambos problemas (el código repetitivo y la complejidad al procesar colecciones, y 
+    la dificultad para aprovechar los multicore) con la API Streams (java.util.stream). El primer 
+    motivo de diseño es que existen muchos patrones de procesamiento de datos (similares a filterApples
+    en la sección anterior u operaciones conocidas de lenguajes de consulta de bases de datos como 
+    SQL) que se repiten constantemente y que se beneficiarían de formar parte de una biblioteca: 
+    filtrar datos según un criterio (por ejemplo, manzanas pesadas), extraer datos (por ejemplo, 
+    extraer el campo de peso de cada manzana en una lista) o agrupar datos (por ejemplo, agrupar una
+    lista de números en listas separadas de pares e impares), entre otros. El segundo motivo es que 
+    tales operaciones a menudo pueden paralelizarse. Por ejemplo, como se ilustra en la figura 1.6, 
+    filtrar una lista en dos CPUs podría hacerse pidiendo a una CPU que procese la primera mitad de 
+    la lista y a la segunda CPU que procese la otra mitad. Esto se llama paso de división (1). Las 
+    CPUs luego filtran sus respectivas mitades de la lista (2). Finalmente (3), una CPU combinaría 
+    los dos resultados. (Esto está estrechamente relacionado con cómo Google realiza búsquedas tan 
+    rápidamente, utilizando muchos más de dos procesadores).
+
+    Por ahora, simplemente diremos que la nueva API Streams se comporta de forma similar a la API de
+    Colecciones existente en Java: ambas proporcionan acceso a secuencias de elementos de datos. Pero
+    es útil tener en cuenta que las colecciones se centran principalmente en almacenar y acceder a 
+    datos, mientras que los flujos (streams) se enfocan sobre todo en describir cálculos sobre los 
+    datos. El punto clave aquí es que la API Streams permite y fomenta que los elementos de un flujo 
+    sean procesados en paralelo. Aunque al principio pueda parecer extraño, a menudo la forma más 
+    rápida de filtrar una colección (por ejemplo, usar filterApples en la sección anterior sobre una 
+    lista) es convertirla en un flujo, procesarla en paralelo y luego convertirla nuevamente en una 
+    lista. Nuevamente, diremos simplemente “paralelismo casi gratuito” y daremos una muestra de cómo 
+    puedes filtrar manzanas pesadas de una lista de forma secuencial o en paralelo usando flujos y una
+    expresión lambda.
+    Este es un ejemplo de procesamiento secuencial:
+
+```java
+import static java.util.stream.Collectors.toList;
+List<Apple> heavyApples =
+    inventory.stream().filter((Apple a) -> a.getWeight() > 150)
+    .collect(toList());
+```
+
+    Y aquí está usando procesamiento paralelo:
+
+```java
+import static java.util.stream.Collectors.toList;
+List<Apple> heavyApples =
+    inventory.parallelStream().filter((Apple a) -> a.getWeight() > 150)
+    .collect(toList());
+```
+
+### **Paralelismo en Java y sin estado mutable compartido**
+    Siempre se ha dicho que el paralelismo en Java es difícil, y todo lo relacionado con synchronized
+    es propenso a errores. ¿Dónde está la solución mágica en Java 8?
+    Hay dos soluciones clave. Primero, la biblioteca se encarga de la partición: divide un flujo grande
+    en varios más pequeños para procesarlos en paralelo automáticamente. Segundo, este paralelismo 
+    casi gratuito que ofrecen los flujos (streams) solo funciona si los métodos pasados a funciones 
+    como filter no interactúan entre sí (por ejemplo, mediante objetos compartidos mutables). Pero 
+    resulta que esta restricción se siente natural para un programador (véase, por ejemplo, nuestro 
+    caso Apple::isGreenApple). Aunque el significado principal de "funcional" en programación funcional
+    sea "usar funciones como valores de primera clase", a menudo tiene un matiz secundario de "sin 
+    interacción durante la ejecución entre componentes".
+
+    El capítulo 7 explora con mayor detalle el procesamiento paralelo de datos en Java 8 y su rendimiento. 
+    Uno de los problemas prácticos que los desarrolladores de Java 8 encontraron al evolucionar el 
+    lenguaje con todas estas nuevas funcionalidades fue cómo evolucionar interfaces existentes. Por 
+    ejemplo, el método Collections.sort pertenece a la interfaz List, pero nunca fue incluido. 
+    Idealmente, querrías hacer list.sort(comparator) en lugar de Collections.sort(list, comparator). 
+    Esto puede parecer trivial, pero antes de Java 8 solo podías actualizar una interfaz si actualizabas
+    todas las clases que la implementaban: ¡una pesadilla logística! Este problema se resuelve en Java 
+    8 mediante los métodos por defecto (default methods).
+
+### **Métodos por defecto y módulos Java**
+    Como mencionamos anteriormente, los sistemas modernos tienden a construirse a partir de componentes,
+    quizás adquiridos desde otros lugares. Históricamente, Java ofrecía poco soporte para esto, aparte
+    de un archivo JAR que contiene un conjunto de paquetes Java sin una estructura particular. Además,
+    era difícil evolucionar las interfaces de esos paquetes: cambiar una interfaz en Java implicaba 
+    cambiar todas las clases que la implementaban. Java 8 y 9 han comenzado a abordar este problema.
+
+    Primero, Java 9 proporciona un sistema de módulos que ofrece sintaxis para definir módulos que 
+    contienen colecciones de paquetes, permitiendo un control mucho mejor sobre la visibilidad y los 
+    espacios de nombres. Los módulos enriquecen un componente simple tipo JAR con estructura, tanto 
+    para documentación del usuario como para verificación automática; los explicamos en detalle en el 
+    capítulo 14. Segundo, Java 8 añadió métodos por defecto para apoyar interfaces evolutivas. Los 
+    tratamos en profundidad en el capítulo 13. Son importantes porque cada vez será más común 
+    encontrarlos en interfaces, pero como relativamente pocos programadores necesitarán escribir métodos
+    por defecto por sí mismos, y dado que facilitan la evolución del software más que ayudar a escribir 
+    un programa específico, mantenemos aquí la explicación breve y basada en ejemplos.
+
+    En la sección 1.4, dimos el siguiente ejemplo de código en Java 8:
+```java
+List<Apple> heavyApples1 =
+    inventory.stream().filter((Apple a) -> a.getWeight() > 150)
+    .collect(toList());
+List<Apple> heavyApples2 =
+    inventory.parallelStream().filter((Apple a) -> a.getWeight() > 150)
+            .collect(toList());
+```
+
+    Pero aquí surge un problema: una List<T> anterior a Java 8 no tiene los métodos stream ni 
+    parallelStream, y tampoco los tiene la interfaz Collection<T> que implementa, porque estos métodos 
+    aún no se habían concebido. Y sin estos métodos, este código no compilará. La solución más simple,
+    que podrías aplicar en tus propias interfaces, habría sido que los diseñadores de Java 8 añadieran 
+    el método stream a la interfaz Collection y agregaran su implementación en la clase ArrayList.
+
+    Pero hacer esto habría sido un desastre para los usuarios. Muchos frameworks alternativos de 
+    colecciones implementan interfaces de la API Collections. Añadir un nuevo método a una interfaz 
+    significa que todas las clases concretas deben proporcionar una implementación para él. Los 
+    diseñadores del lenguaje no tienen control sobre las implementaciones existentes de Collection, 
+    por lo que surge un dilema: ¿cómo puedes evolucionar interfaces publicadas sin romper 
+    implementaciones existentes?
+
+    La solución en Java 8 es romper este último vínculo: ahora una interfaz puede contener firmas de 
+    métodos para los cuales una clase implementadora no proporciona una implementación. Entonces, 
+    ¿quién los implementa? Los cuerpos de los métodos faltantes se definen directamente en la interfaz 
+    (de ahí el nombre de implementaciones por defecto), en lugar de en la clase que la implementa.
+
+    Esto permite que el diseñador de una interfaz amplíe la interfaz más allá de los métodos 
+    originalmente planeados, sin romper el código existente. Java 8 permite usar la palabra clave 
+    default existente en las especificaciones de interfaz para lograr esto. Por ejemplo, en Java 8 
+    puedes llamar al método sort directamente sobre una lista. Esto es posible gracias al siguiente 
+    método por defecto en la interfaz List de Java 8, que invoca al método estático Collections.sort:
+
+```java
+default void sort(Comparator<? super E> c) {
+    Collections.sort(this, c);
+}
+```
+    Esto significa que las clases concretas de List no tienen que implementar explícitamente sort, 
+    mientras que en versiones anteriores de Java, dichas clases concretas habrían fallado al 
+    recompilarse a menos que proporcionaran una implementación para sort.
+
+    Pero un momento. Una sola clase puede implementar múltiples interfaces, ¿verdad? Si tienes varias
+    implementaciones por defecto en distintas interfaces, ¿eso significa que tienes una forma de 
+    herencia múltiple en Java? Sí, en cierta medida. Mostramos en el capítulo 13 que existen algunas 
+    reglas que evitan problemas como el famoso problema de herencia en diamante presente en C++.
+
+### **Otras buenas ideas de la programación funcional**
+    Las secciones anteriores presentaron dos ideas centrales de la programación funcional que ahora 
+    forman parte de Java: usar métodos y lambdas como valores de primera clase, y la idea de que las 
+    llamadas a funciones o métodos pueden ejecutarse de forma eficiente y segura en paralelo si no 
+    hay estado compartido mutable. Ambas ideas son aprovechadas por la nueva API Streams descrita 
+    anteriormente.
+
+    Lenguajes funcionales comunes (SML, OCaml, Haskell) también ofrecen otros mecanismos para ayudar 
+    a los programadores. Uno de ellos es evitar null mediante el uso explícito de tipos de datos más 
+    descriptivos. Tony Hoare, una figura destacada de la informática, dijo en una presentación en 
+    QCon Londres 2009:
+
+        --"Lo llamo mi error de mil millones de dólares. Fue la invención de la referencia nula en 1965.
+        [...] No pude resistir la tentación de incluir una referencia nula, simplemente porque era muy 
+        fácil de implementar."--
+
+    Java 8 introdujo la clase Optional<T>, que, si se usa de forma consistente, puede ayudar a evitar
+    las excepciones de puntero nulo (null-pointer exceptions). Es un objeto contenedor que puede o no 
+    contener un valor. Optional<T> incluye métodos para manejar explícitamente el caso en que un valor
+    esté ausente, evitando así dichas excepciones. Utiliza el sistema de tipos para permitirte indicar 
+    cuándo se espera que una variable pueda tener un valor faltante. Analizamos Optional<T> en detalle 
+    en el capítulo 11.
+
+    Una segunda idea es la del pattern matching (coincidencia de patrones) estructural. Esto se usa 
+    en matemáticas. Por ejemplo:
+```math
+    f(0) = 1
+    f(n) = n*f(n-1) otherwise
+```
+
+    En Java, escribirías una sentencia if-then-else o switch. Otros lenguajes han mostrado que, para
+    tipos de datos más complejos, el pattern matching puede expresar ideas de programación de forma 
+    más concisa que usar if-then-else. Para tales tipos de datos, también podrías usar polimorfismo 
+    y sobrescritura de métodos como alternativa a if-then-else, aunque existe una discusión continua 
+    en el diseño del lenguaje sobre cuál es más adecuado. Diríamos que ambas son herramientas útiles 
+    y que deberías tenerlas a tu disposición. Desafortunadamente, Java 8 no tiene soporte completo 
+    para pattern matching, aunque mostramos cómo se puede expresar en el capítulo 19. Actualmente se 
+    está discutiendo una propuesta de mejora para Java (JEP) que añadiría pattern matching en una 
+    futura versión (ver http://openjdk.java.net/jeps/305). Mientras tanto, ilustraremos con un ejemplo 
+    escrito en el lenguaje de programación Scala (otro lenguaje similar a Java que usa la JVM y que 
+    ha inspirado algunos aspectos de la evolución de Java; ver capítulo 20). Supongamos que quieres 
+    escribir un programa que realice simplificaciones básicas en un árbol que representa una expresión 
+    aritmética. Dado un tipo de datos Expr que representa dichas expresiones, en Scala puedes escribir 
+    el siguiente código para descomponer un Expr en sus partes y luego devolver otro Expr:
+
+```Scala
+def simplifyExpression(expr: Expr): Expr = expr match {
+    case BinOp("+", e, Number(0)) => e  // add 0
+    case BinOp("-", e, Number(0)) => e  // substract 0
+    case BinOp("*", e, Number(1)) => e  // multiplies by 1
+    case BinOp("/", e, Number(1)) => e  // divides by 1
+    case _ => expr  // Can’t be simplified with these cases, so leave alone
+}
+```
+
+    En Scala, la sintaxis expr match corresponde al switch de Java. No te preocupes por este código 
+    por ahora: aprenderás más sobre el pattern matching en el capítulo 19. Por ahora, puedes pensar 
+    en el pattern matching como una forma extendida de switch que puede descomponer un tipo de dato 
+    en sus componentes al mismo tiempo.
+
+    ¿Por qué el switch en Java debería limitarse a valores primitivos y cadenas? Los lenguajes 
+    funcionales suelen permitir usar switch en muchos más tipos de datos, incluyendo pattern matching 
+    (en Scala, esto se logra con la operación match). En el diseño orientado a objetos, el patrón 
+    visitor es común para recorrer una familia de clases (como los componentes de un coche: ruedas, 
+    motor, chasis, etc.) y aplicar una operación a cada objeto visitado. Una ventaja del pattern 
+    matching es que el compilador puede detectar errores comunes, como: “La clase Brakes forma parte 
+    de la jerarquía de clases que representan componentes de Car. Olvidaste manejarla explícitamente”.
+
+    Los capítulos 18 y 19 ofrecen una introducción completa a la programación funcional y a cómo 
+    escribir programas en estilo funcional en Java 8, incluyendo las herramientas de funciones de su 
+    biblioteca. El capítulo 20 compara las características de Java 8 con las de Scala, un lenguaje que,
+    como Java, se ejecuta sobre la JVM y que ha evolucionado rápidamente, desafiando ciertos aspectos 
+    del nicho de Java en el ecosistema de lenguajes de programación. Este contenido se sitúa al final 
+    del libro para ofrecer una visión más clara del porqué se añadieron las nuevas funciones en 
+    Java 8 y 9.
+
+### **Características de Java 8, 9, 10 y 11: ¿Por dónde empezar?**
+    Java 8 y Java 9 introdujeron actualizaciones significativas, pero como programador Java, lo más 
+    probable es que sean las novedades de Java 8 las que más afecten tu trabajo diario a nivel de 
+    código: pasar métodos o lambdas se ha convertido en un conocimiento esencial. En cambio, las 
+    mejoras de Java 9 potencian la capacidad de definir y usar componentes a mayor escala, ya sea 
+    estructurando sistemas con módulos o usando herramientas de programación reactiva. Java 10 
+    representa un avance más pequeño, centrado en la inferencia de tipos para variables locales (var),
+    y en Java 11 se amplía la sintaxis de los parámetros de expresiones lambda.
+
+### **Resumen**
+- Ten en cuenta la idea del ecosistema de lenguajes y la presión de evolucionar o decaer. Aunque Java
+  pueda estar muy saludable ahora, recordamos otros lenguajes sanos como COBOL que no evolucionaron.
+- Las principales novedades de Java 8 aportan conceptos y funcionalidades nuevas que facilitan 
+  escribir programas efectivos y concisos.
+- Los procesadores multicore no se aprovechan completamente con las prácticas de programación 
+  anteriores a Java 8.
+- Las funciones son valores de primera clase; recuerda cómo se pasan métodos como valores funcionales
+  y cómo se escriben funciones anónimas (lambdas).
+- El concepto de streams en Java 8 generaliza muchos aspectos de las colecciones, permite un código 
+  más legible y posibilita procesar elementos en paralelo.
+- La programación a gran escala basada en componentes y la evolución de interfaces no fueron 
+  históricamente bien atendidas por Java. Ahora puedes definir módulos en Java 9 y usar métodos por 
+  defecto para mejorar interfaces sin modificar todas las clases que las implementan.
+- Otras ideas interesantes de la programación funcional incluyen el manejo de null y el uso de pattern
+  matching.
+
