@@ -1,7 +1,7 @@
 # ***PARTE 1***
 
 
-## *Procesamiento de Streams (Flujos)*
+## **Procesamiento de Streams (Flujos)**
 
     El primer concepto de programación es el procesamiento de streams. Para propósitos introductorios, 
     un stream (flujo) es una secuencia de elementos de datos que conceptualmente se producen uno a la 
@@ -50,7 +50,7 @@ cat file1 file2 | tr "[A-Z]" "[a-z]" | sort | tail -3
     gratuito en lugar del arduo trabajo que implica usar Threads (hilos). Cubriremos la API de Streams 
     de Java 8 en detalle en los capítulos 4 a 7.
 
-### *Pasar código a métodos con behavior parameterization (Parametrización de Comportamiento)*
+## **Pasar código a métodos con behavior parameterization (Parametrización de Comportamiento)**
 
     El segundo concepto de programación añadido a Java 8 es la capacidad de pasar un fragmento de 
     código a una API. Esto suena terriblemente abstracto.
@@ -92,7 +92,7 @@ public int compareUsingCustomerId(String inv1, String inv2){}
     puedes hacer utilizando esta característica, con técnicas provenientes de la comunidad de la 
     programación funcional.
 
-### **Paralelismo y datos mutables compartidos**
+## **Paralelismo y datos mutables compartidos**
 
     El tercer concepto de programación es bastante más implícito y surge de la frase "paralelismo 
     casi gratis" en nuestra discusión anterior sobre el procesamiento de flujos (streams). ¿A qué 
@@ -123,7 +123,7 @@ public int compareUsingCustomerId(String inv1, String inv2){}
     transforma los argumentos en resultados; en otras palabras, se comporta como una función 
     matemática y no tiene efectos secundarios (visibles).
 
-### **Java necesita evolucionar**
+## **Java necesita evolucionar**
 
     Ya has visto la evolución en Java antes. Por ejemplo, la introducción de genéricos y el uso de 
     List<String> en lugar de solo List pudo haber sido inicialmente irritante. Pero ahora estás 
@@ -159,7 +159,7 @@ public int compareUsingCustomerId(String inv1, String inv2){}
     Ahora presentaremos los nuevos conceptos en Java 8, uno por uno, señalando los capítulos que 
     cubren estos conceptos con más detalle.
 
-### **Funciones en Java**
+## **Funciones en Java**
 
     La palabra función en los lenguajes de programación se usa comúnmente como sinónimo de método, 
     particularmente de un método estático; esto se suma a su uso para función matemática, aquella 
@@ -197,7 +197,7 @@ public int compareUsingCustomerId(String inv1, String inv2){}
     también podría ser una buena idea. Varios lenguajes como Smalltalk y JavaScript han explorado 
     este camino.
 
-### **Métodos y lambdas como ciudadanos de primera clase**
+## **Métodos y lambdas como ciudadanos de primera clase**
 
     Experimentos en otros lenguajes, como Scala y Groovy, han demostrado que permitir que conceptos como
     los métodos se utilicen como valores de primera clase facilita la programación al ampliar el 
@@ -248,7 +248,7 @@ File[] hiddenFiles = new File(".").listFiles(File::isHidden);
     pasar código como valor, como se muestra en la figura 1.3. La figura 1.4 ilustra el concepto. 
     Verás un ejemplo concreto (seleccionar manzanas de un inventario) en la siguiente sección.
 
-###   **Lambdas: Funciones Anonimas**
+##   **Lambdas: Funciones Anonimas**
     Además de permitir que los métodos (nombrados) sean valores de primera clase, Java 8 introduce 
     un concepto más rico: las funciones como valores, incluyendo lambdas (o funciones anónimas). Por
     ejemplo, puedes escribir (int x) -> x + 1 para expresar "la función que, al recibir un argumento 
@@ -275,7 +275,7 @@ File[] hiddenFiles = new File(".").listFiles(File::isHidden);
 // In Java 8 you can pass the isHidden function to the listFiles method using the method reference :: syntax.
 ```
 
-### **Pasar código: un ejemplo**
+## **Pasar código: un ejemplo**
     Veamos un ejemplo de cómo esto te ayuda a escribir programas (analizado con más detalle en el 
     capítulo 2). Todo el código de los ejemplos está disponible en un repositorio de GitHub y como 
     descarga desde la página web del libro. Ambos enlaces se pueden encontrar en www.manning.com/books/modern-java-in-action.
@@ -367,7 +367,7 @@ filterApples(inventory, Apple::isHeavyApple);
     es más estándar (y ligeramente más eficiente porque evita el boxing de un boolean en un Boolean).
 
 
-### **De pasar métodos a lambdas**
+## **De pasar métodos a lambdas**
     Pasar métodos como valores es claramente útil, pero es molesto tener que escribir una definición
     para métodos cortos como isHeavyApple e isGreenApple cuando se usan quizás solo una o dos veces.
     Pero Java 8 también ha resuelto esto. Introduce una nueva notación (funciones anónimas, o lambdas)
@@ -410,7 +410,7 @@ filter(inventory, (Apple a) -> a.getWeight() > 150 );
     por programadores funcionales, junto con métodos para convertir entre colecciones y streams, que
     ahora exploraremos.
 
-### **Streams**
+## **Streams**
     Nearly every Java application makes and processes collections. But working with collec-tions 
     isn’t always ideal. For example, let’s say you need to filter expensive transactionsfrom a list
     and then group them by currency. You’d need to write a lot of boilerplate code to implement 
@@ -461,7 +461,7 @@ Map<Currency, List<Transaction>> transactionsByCurrencies =
     deberían poder procesar los datos ocho veces más rápido que con un solo núcleo, ya que trabajan 
     en paralelo.
 
-### **Ordenadores multinúcleo**
+## **Ordenadores multinúcleo**
     Todos los ordenadores de sobremesa y portátiles nuevos son ordenadores multinúcleo. En lugar de 
     tener una sola CPU, cuentan con cuatro, ocho o más CPUs (normalmente llamadas núcleos). El 
     problema es que un programa clásico en Java utiliza solo uno de estos núcleos, desperdiciando el
@@ -478,7 +478,7 @@ Map<Currency, List<Transaction>> transactionsByCurrencies =
     codificarías este algoritmo en Java (incluso para un índice más pequeño que el de Google, 
     necesitarías aprovechar todos los núcleos de tu computadora).
 
-### **El multihilos es difícil**
+## **El multihilos es difícil**
     El problema es que aprovechar el paralelismo escribiendo código multihilo (usando la API de hilos
     de versiones anteriores de Java) es difícil. Tienes que pensar de forma diferente: los hilos 
     pueden acceder y actualizar variables compartidas al mismo tiempo. Como resultado, los datos 
@@ -531,7 +531,7 @@ List<Apple> heavyApples =
     .collect(toList());
 ```
 
-### **Paralelismo en Java y sin estado mutable compartido**
+## **Paralelismo en Java y sin estado mutable compartido**
     Siempre se ha dicho que el paralelismo en Java es difícil, y todo lo relacionado con synchronized
     es propenso a errores. ¿Dónde está la solución mágica en Java 8?
     Hay dos soluciones clave. Primero, la biblioteca se encarga de la partición: divide un flujo grande
@@ -552,7 +552,7 @@ List<Apple> heavyApples =
     todas las clases que la implementaban: ¡una pesadilla logística! Este problema se resuelve en Java 
     8 mediante los métodos por defecto (default methods).
 
-### **Métodos por defecto y módulos Java**
+## **Métodos por defecto y módulos Java**
     Como mencionamos anteriormente, los sistemas modernos tienden a construirse a partir de componentes,
     quizás adquiridos desde otros lugares. Históricamente, Java ofrecía poco soporte para esto, aparte
     de un archivo JAR que contiene un conjunto de paquetes Java sin una estructura particular. Además,
@@ -617,7 +617,7 @@ default void sort(Comparator<? super E> c) {
     herencia múltiple en Java? Sí, en cierta medida. Mostramos en el capítulo 13 que existen algunas 
     reglas que evitan problemas como el famoso problema de herencia en diamante presente en C++.
 
-### **Otras buenas ideas de la programación funcional**
+## **Otras buenas ideas de la programación funcional**
     Las secciones anteriores presentaron dos ideas centrales de la programación funcional que ahora 
     forman parte de Java: usar métodos y lambdas como valores de primera clase, y la idea de que las 
     llamadas a funciones o métodos pueden ejecutarse de forma eficiente y segura en paralelo si no 
@@ -693,7 +693,7 @@ def simplifyExpression(expr: Expr): Expr = expr match {
     del libro para ofrecer una visión más clara del porqué se añadieron las nuevas funciones en 
     Java 8 y 9.
 
-### **Características de Java 8, 9, 10 y 11: ¿Por dónde empezar?**
+## **Características de Java 8, 9, 10 y 11: ¿Por dónde empezar?**
     Java 8 y Java 9 introdujeron actualizaciones significativas, pero como programador Java, lo más 
     probable es que sean las novedades de Java 8 las que más afecten tu trabajo diario a nivel de 
     código: pasar métodos o lambdas se ha convertido en un conocimiento esencial. En cambio, las 
@@ -702,7 +702,7 @@ def simplifyExpression(expr: Expr): Expr = expr match {
     representa un avance más pequeño, centrado en la inferencia de tipos para variables locales (var),
     y en Java 11 se amplía la sintaxis de los parámetros de expresiones lambda.
 
-### **Resumen**
+## **Resumen**
 - Ten en cuenta la idea del ecosistema de lenguajes y la presión de evolucionar o decaer. Aunque Java
   pueda estar muy saludable ahora, recordamos otros lenguajes sanos como COBOL que no evolucionaron.
 - Las principales novedades de Java 8 aportan conceptos y funcionalidades nuevas que facilitan 
