@@ -191,7 +191,8 @@ public class AppleGreenColorPredicate implements ApplePredicate {  //Selects onl
 classDiagram
 
     class ApplePredicate {
-      + boolean test(Apple apple)
+        <<interface>>
+        + boolean test(Apple apple)
     }
     
     class AppleGreenColorPredicate
