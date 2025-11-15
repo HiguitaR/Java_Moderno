@@ -187,18 +187,18 @@ public class AppleGreenColorPredicate implements ApplePredicate {  //Selects onl
 }    
 ```
 
-```plantuml
-@startuml
-interface ApplePredicate {
-  + boolean test(Apple apple)
-}
-
-class AppleGreenColorPredicate
-class AppleHeavyPredicate
-
-ApplePredicate <|.. AppleGreenColorPredicate
-ApplePredicate <|.. AppleHeavyPredicate
-@enduml
+```puml
+    @startuml
+    interface ApplePredicate {
+      + boolean test(Apple apple)
+    }
+    
+    class AppleGreenColorPredicate
+    class AppleHeavyPredicate
+    
+    ApplePredicate <|.. AppleGreenColorPredicate
+    ApplePredicate <|.. AppleHeavyPredicate
+    @enduml
 ```
 
     Puedes ver estos criterios como diferentes comportamientos para el método de filtrado. Lo que 
