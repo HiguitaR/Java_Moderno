@@ -221,3 +221,46 @@ classDiagram
     la lógica de recorrer la colección dentro del método filterApples del comportamiento que deseas 
     aplicar a cada elemento (en este caso, un predicado).
 
+## **Cuarto intento: filtrado por criterios abstractos**
+    Nuestro método de filtro modificado, que utiliza un ApplePredicate, tiene este aspecto:
+```java
+public static List<Apple> filterApples(List<Apple> inventory, ApplePredicate p) {
+    List<Apple> result = new ArrayList<>();
+    for (Apple apple : inventory) {
+        if (p.test(apple)) {   //Predicate p encapsulates the condition to test on an apple.
+            result.add(apple);
+        }
+    }
+    return result;
+}    
+```
+    CODIGO CORRECTO/COMPORTAMIENTO
+    Vale la pena hacer una breve pausa para celebrar. ¡Este código es mucho más flexible que nuestro
+    primer intento, pero al mismo tiempo es fácil de leer y de usar! Ahora puedes crear diferentes 
+    objetos ApplePredicate y pasarlos al método filterApples. ¡Flexibilidad total! Por ejemplo, si el 
+    granjero te pide que encuentres todas las manzanas rojas que pesen más de 150 g, todo lo que necesitas
+    hacer es crear una clase que implemente ApplePredicate adecuadamente. Tu código ahora es lo 
+    suficientemente flexible para cualquier cambio en los requisitos que involucren los atributos de 
+    Apple:
+
+```java
+public class AppleRedAndHeavyPredicate implements ApplePredicate {
+    public boolean test(Apple apple){
+        return RED.equals(apple.getColor()) && apple.getWeight() > 150;
+    }
+}
+List<Apple> redAndHeavyApples = filterApples(inventory, new AppleRedAndHeavyPredicate());
+```
+
+    Has logrado algo interesante: el comportamiento del método filterApples depende del código que le
+    pasas a través del objeto ApplePredicate. ¡Has parametrizado el comportamiento del método 
+    filterApples! Ten en cuenta que, en el ejemplo anterior, lo único relevante es la implementación 
+    del método test, como se ilustra en la figura 2.2; es esto lo que define los nuevos comportamientos 
+    para el método filterApples. Desafortunadamente, como el método filterApples solo puede recibir 
+    objetos, debes encapsular ese código dentro de un objeto ApplePredicate. Lo que estás haciendo 
+    es similar a pasar código en línea, porque estás transmitiendo una expresión booleana a través de 
+    un objeto que implementa el método test. Verás en la sección 2.3 (y con más detalle en el capítulo 3) 
+    que, al usar lambdas, puedes pasar directamente la expresión RED.equals(apple.getColor()) && 
+    apple.getWeight() > 150 al método filterApples sin tener que definir múltiples clases ApplePredicate.
+    Esto elimina la verbosidad innecesaria.
+
