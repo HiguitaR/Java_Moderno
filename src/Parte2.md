@@ -264,3 +264,272 @@ List<Apple> redAndHeavyApples = filterApples(inventory, new AppleRedAndHeavyPred
     apple.getWeight() > 150 al método filterApples sin tener que definir múltiples clases ApplePredicate.
     Esto elimina la verbosidad innecesaria.
 
+    ApplePredicate Object
+```java
+public class AppleRedAndHeavyPredicate implements ApplePredicate{
+    public boolean test(Apple apple){
+        return RED.equals(apple.getColor()) && apple.getWeight() > 150;
+    }
+    
+    filterApples(inventory, "pass as arguments");
+    /*
+            Pasa una estrategia al métodos de filtro: filtra las manzanas utilizando la expresión 
+            booleana encapsulada dentro del objeto ApplePredicate. Para encapsular este fragmento de
+             código, se envuelve con una gran cantidad de código repetitivo
+     */
+}
+```
+
+    MÚLTIPLES COMPORTAMIENTOS, UN SOLO PARÁMETRO
+    Como explicamos anteriormente, la parametrización del comportamiento es muy útil porque te permite
+    separar la lógica de iteración sobre la colección a filtrar del comportamiento que se aplica a 
+    cada elemento de esa colección. Como consecuencia, puedes reutilizar el mismo método y 
+    proporcionarle diferentes comportamientos para lograr distintos resultados, como se ilustra en 
+    la figura 2.3. Por eso, la parametrización del comportamiento es un concepto útil que deberías 
+    tener en tu conjunto de herramientas para crear APIs flexibles.
+
+    new behavior -> return apple.getWeight() > 150; // ApplePredicate
+                    return GREEN.equals(apple.getColor()); // ApplePredicate
+
+    Behaivor parameterization -> 
+
+```java
+import java.util.ArrayList;
+import java.util.List;
+
+public static List<Apple> filterApples(List<Apples> inventory, ApplePredicate p) {
+    List<Apple> result = new ArrayList<>();
+    for(Apple apple : inventory){
+        if(p.test(apple)){
+            result.add(apple);
+        }
+    }
+    return result;
+}
+```
+
+    ¡Para asegurarte de que comprendes bien la idea de la parametrización del comportamiento, 
+    intenta resolver el cuestionario 2.1!
+
+    Cuestionario 2.1: Escribe un método flexible prettyPrintApple
+    Escribe un método prettyPrintApple que tome una lista de manzanas y que pueda ser parametrizado
+    con múltiples formas de generar una salida en forma de cadena (String) a partir de una manzana 
+    (algo así como varios métodos toString personalizados). Por ejemplo, podrías indicarle a tu 
+    método prettyPrintApple que imprima únicamente el peso de cada manzana. Además, podrías indicarle
+    que imprima cada manzana individualmente y mencione si es pesada o ligera. La solución es similar
+    a los ejemplos de filtrado que hemos explorado hasta ahora. Para ayudarte a comenzar, 
+    proporcionamos un esqueleto aproximado del método prettyPrintApple:
+```java
+public static void prettyPrintApple(List<Apple> inventory, ???) {
+    for(Apple apple: inventory) {
+        String output = ???.???(apple);
+        System.out.println(output);
+    }
+}   
+```
+    Respuesta:
+    Primero, necesitas una forma de representar un comportamiento que tome una Apple y devuelva un 
+    resultado formateado como String. Ya hiciste algo similar cuando creaste la interfaz 
+    ApplePredicate.
+```java
+public interface AppleFormatter {
+    String accept(Apple a);
+}
+    //You can now represent multiple formatting behaviors by implementing the Apple-Formatter interface:
+public class AppleFancyFormatter implements AppleFormatter {
+    public String accept(Apple apple) {
+        String characteristic = apple.getWeight() > 150 ? "heavy" : "light";
+        return "A " + characteristic + " " + apple.getColor() +" apple";
+    }
+    public class AppleSimpleFormatter implements AppleFormatter {
+        public String accept(Apple apple) {
+            return "An apple of " + apple.getWeight() + "g";
+        }
+    }
+}
+    //Finally, you need to tell your prettyPrintApple method to take AppleFormatter
+    //objects and use them internally. You can do this by adding a parameter to pretty-
+    //PrintApple:
+public static void prettyPrintApple(List<Apple> inventory, AppleFormatter formatter) {
+    for(Apple apple: inventory) {
+        String output = formatter.accept(apple);
+        System.out.println(output);
+    }
+}
+```
+
+
+    ¡Bingo! Ahora puedes pasar múltiples comportamientos a tu método prettyPrintApple. Esto se hace 
+    instanciando implementaciones de AppleFormatter y pasándolas como argumentos a prettyPrintApple:
+```java
+prettyPrintApple(inventory, new AppleFancyFormatter());   
+```
+    Esto generará una salida similar a:
+
+    Una manzana verde ligera
+    Una manzana roja pesada
+    O prueba esto:
+```java
+prettyPrintApple(inventory, new AppleSimpleFormatter());   
+```
+    Esto generará una salida similar a:
+
+    Una manzana de 80g
+    Una manzana de 155g
+    
+    Has visto que puedes abstraer el comportamiento y hacer que tu código se adapte a cambios en los
+    requisitos, pero el proceso es verbose porque necesitas declarar múltiples clases que solo se 
+    instancian una vez. Veamos cómo mejorar eso.
+
+    Afrontando la verbosidad
+    Sabemos todos que una característica o concepto difícil de usar será evitado. En este momento, 
+    cuando deseas pasar un nuevo comportamiento a tu método filterApples, estás obligado a declarar 
+    varias clases que implementen la interfaz ApplePredicate y luego instanciar varios objetos 
+    ApplePredicate que solo se asignan una vez, como se muestra en el siguiente listado que resume 
+    lo visto hasta ahora. ¡Hay mucha verbosidad involucrada y es un proceso que consume tiempo!
+    
+    Parametrización del comportamiento: filtrando manzanas con predicados:
+```java
+public class AppleHeavyWeightPredicate implements ApplePredicate { //Select heavy apples
+    public boolean test(Apple apple) {
+        return apple.getWeight() > 150;
+    }
+}
+
+public class AppleGreenColorPredicate implements ApplePredicate {  //Select GREEN apples
+    public boolean test(Apple apple) {
+        return GREEN.equals(apple.getColor());
+    }
+}
+
+public class FilteringApples {
+    public static void main(String... args) {
+        List<Apple> inventory = Arrays.asList(new Apple(80, GREEN), new Apple(155, GREEN),
+                new Apple(120, RED));
+        List<Apple> heavyApples =
+                filterApples(inventory, new AppleHeavyWeightPredicate()); //Results in a List containing
+                                                                // one Apple of 155g.
+        List<Apple> greenApples =
+                filterApples(inventory, new AppleGreenColorPredicate()); //Results in a List containing
+                                                                // two green apples.
+    }
+
+    public static List<Apple> filterApples(List<Apple> inventory, ApplePredicate p) {
+        List<Apple> result = new ArrayList<>();
+        for (Apple apple : inventory) {
+            if (p.test(apple)) {
+                result.add(apple);
+            }
+        }
+        return result;
+    }    
+}
+```
+    Este esfuerzo adicional es innecesario. ¿Puedes hacerlo mejor? Java cuenta con un mecanismo 
+    llamado clases anónimas, que te permiten declarar e instanciar una clase al mismo tiempo. Estas 
+    te permiten mejorar tu código un paso más, haciéndolo un poco más conciso. Pero no son del todo 
+    satisfactorias. La sección 2.3.3 anticipa el próximo capítulo con una breve vista previa de cómo 
+    las expresiones lambda pueden hacer tu código más legible.
+
+    CLASSES ANONIMAS
+    Las clases anónimas son como las clases locales (una clase definida dentro de un bloque) con las
+    que ya estás familiarizado en Java. Pero las clases anónimas no tienen nombre. Te permiten 
+    declarar e instanciar una clase al mismo tiempo. En resumen, te permiten crear implementaciones 
+    ad hoc.
+
+    QUINTO INTENTO: USANDO UNA CLASE ANONIMA
+    El siguiente código muestra cómo reescribir el ejemplo de filtrado creando un objeto que 
+    implementa ApplePredicate utilizando una clase anónima:
+```java 
+// Parameterizes the behavior of the method filterApples with an anonymous class.
+List<Apple> redApples = filterApples(inventory, new ApplePredicate() {
+    public boolean test(Apple apple){
+        return RED.equals(apple.getColor());
+    }
+});
+```
+    Las clases anónimas se utilizan a menudo en el contexto de aplicaciones GUI para crear objetos 
+    manejadores de eventos. No queremos traer recuerdos dolorosos de Swing, pero lo siguiente es un 
+    patrón común que se ve en la práctica (aquí utilizando la API de JavaFX, una plataforma de 
+    interfaz moderna para Java):
+```java
+button.setOnAction(new EventHandler<ActionEvent>() {
+    public void handle(ActionEvent event) {
+        System.out.println("Whoooo a click!!");
+    }
+});
+```
+    Pero las clases anónimas aún no son lo suficientemente buenas. En primer lugar, tienden a ser 
+    voluminosas porque ocupan mucho espacio, como se muestra en el código en negrita aquí, usando los
+    mismos dos ejemplos utilizados anteriormente:
+```java
+// Lots of boilerplate code
+List<Apple> redApples = filterApples(inventory, new ApplePredicate() {
+    public boolean test(Apple a){
+        return RED.equals(a.getColor());
+    }
+});
+button.setOnAction(new EventHandler<ActionEvent>() {
+    public void handle (ActionEvent event){
+        System.out.println("Whoooo a click!!");
+    }
+}    
+```
+    En segundo lugar, muchas programadores encuentran confuso el uso de clases anónimas. Por ejemplo,
+    el cuestionario 2.2 muestra un acertijo clásico de Java que sorprende a la mayoría de los 
+    programadores. ¡Inténtalo tú mismo!
+
+    Cuestionario 2.2: Acertijo con clase anónima
+    ¿Cuál será la salida cuando se ejecute este código: 4, 5, 6 o 42?
+```java
+public class MeaningOfThis {
+    public final int value = 4;
+
+    public void doIt() {
+        int value = 6;
+        Runnable r = new Runnable() {
+            public final int value = 5;
+
+            public void run() {
+                int value = 10;
+                System.out.println(this.value);
+            }
+        };
+        r.run();
+    }
+
+    public static void main(String... args) {
+        MeaningOfThis m = new MeaningOfThis();
+        m.doIt();  // -> What’s the output of this line?
+    }
+}
+```
+    Respuesta:
+    La respuesta es 5, por que 'this' se refiere al contenedor 'Runnable', no ala clase contenedora
+    'MeaningOfThis'.
+    La verbosidad en general es mala; desalienta el uso de una característica del lenguaje porque 
+    lleva mucho tiempo escribir y mantener código verboso, y no es agradable de leer. Un buen código 
+    debería ser fácil de entender de un vistazo. Aunque las clases anónimas reducen en cierta medida 
+    la verbosidad al evitar declarar múltiples clases concretas para una interfaz, aún así resultan 
+    insatisfactorias. En el contexto de pasar un fragmento sencillo de código (por ejemplo, una 
+    expresión booleana que representa un criterio de selección), aún debes crear un objeto e 
+    implementar explícitamente un método para definir un nuevo comportamiento (por ejemplo, el método
+    test para Predicate o el método handle para EventHandler).
+
+    Idealmente, se desea fomentar el uso del patrón de parametrización del comportamiento, ya que, 
+    como acabas de ver, hace que el código sea más adaptable a cambios en los requisitos. En el 
+    capítulo 3 verás que los diseñadores del lenguaje Java 8 resolvieron este problema introduciendo 
+    expresiones lambda, una forma más concisa de pasar código. Basta de suspense; a continuación, 
+    una breve vista previa de cómo las expresiones lambda pueden ayudarte en la búsqueda de un código
+    limpio.
+
+    SEXTO INTENTO: USANDO UNA EXPRESION LAMBDA
+    El código anterior puede reescribirse en Java 8 utilizando una expresión lambda de la siguiente 
+    manera:
+```java
+List<Apple> result = filterApples(inventory, (Apple apple) -> RED.equals(apple.getColor()));
+```
+    Debes admitir que este código se ve mucho más limpio que nuestros intentos anteriores. Es 
+    excelente porque empieza a parecerse mucho más al enunciado del problema. Ahora ya hemos resuelto
+    el problema de la verbosidad.
+
