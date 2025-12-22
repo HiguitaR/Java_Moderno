@@ -533,3 +533,165 @@ List<Apple> result = filterApples(inventory, (Apple apple) -> RED.equals(apple.g
     excelente porque empieza a parecerse mucho más al enunciado del problema. Ahora ya hemos resuelto
     el problema de la verbosidad.
 
+    SEPTIMO INTENTO: ABSTRACCION SOBRE EL TIPO LIST
+    Hay un paso más que puedes realizar en tu camino hacia la abstracción. En este momento, el método
+    filterApples funciona únicamente para Apple. Pero también puedes abstraer sobre el tipo List para
+    ir más allá del dominio del problema en el que estás pensando, como se muestra a continuación:
+```java
+public interface Predicate<T> {
+    boolean test(T t);
+}
+public static <T> List<T> filter(List<T> list, Predicate<T> p) {
+    List<T> result = new ArrayList<>();
+    for (T e : list) {
+        if (p.test(e)) {
+            result.add(e);
+        }
+    }
+    return result;
+}
+```
+    Ahora puedes usar el método filter con una lista de plátanos, naranjas, enteros o cadenas de 
+    texto. ¡Aquí tienes un ejemplo, usando expresiones lambda:
+```java
+List<Apple> redApples = filter(inventory, (Apple apple) -> RED.equals(apple.getColor()));
+List<Integer> evenNumbers = filter(numbers, (Integer i) -> i % 2 == 0);
+```
+    ¿No es genial? ¡Has logrado encontrar el punto óptimo entre flexibilidad y concisión, algo que 
+    no era posible antes de Java 8!
+
+    EJEMPLO DEL MUNDO REAL
+    Ahora has visto que la parametrización del comportamiento es un patrón útil para adaptarse 
+    fácilmente a requisitos cambiantes. Este patrón te permite encapsular un comportamiento (un 
+    fragmento de código) y parametrizar el comportamiento de los métodos pasando y utilizando estos 
+    comportamientos que creas (por ejemplo, diferentes predicados para una manzana). Mencionamos 
+    anteriormente que este enfoque es similar al patrón de diseño Strategy. Es posible que ya hayas 
+    usado este patrón en la práctica. Muchos métodos en la API de Java pueden parametrizarse con 
+    diferentes comportamientos. Estos métodos a menudo se usan junto con clases anónimas. Mostramos 
+    cuatro ejemplos, que deberían reforzar la idea de pasar código: ordenar con un Comparator, 
+    ejecutar un bloque de código con Runnable, devolver un resultado desde una tarea usando Callable
+    y manejar eventos de interfaz gráfica (GUI).
+
+    ORDENAMIENTO CON UN COMPARADOR
+    Ordenar una colección es una tarea recurrente en programación. Por ejemplo, imagina que tu 
+    granjero te pide ordenar el inventario de manzanas según su peso. O quizás cambia de opinión y 
+    quiere que ordenes las manzanas por color. ¿Te suena familiar? Sí, necesitas una forma de 
+    representar y usar diferentes comportamientos de ordenamiento para adaptarte fácilmente a 
+    requisitos cambiantes.
+    Desde Java 8, una List incluye un método sort (también podrías usar Collections.sort). El 
+    comportamiento de sort puede parametrizarse utilizando un objeto java.util.Comparator, que tiene
+    la siguiente interfaz:
+```java
+// java.util.Comparator
+public interface Comparator<T> {
+    int compare(T o1, T o2);
+}
+```
+    Por lo tanto, puedes crear diferentes comportamientos para el método sort creando una 
+    implementación ad hoc de Comparator. Por ejemplo, puedes usarlo para ordenar el inventario por 
+    peso creciente utilizando una clase anónima:
+```java
+inventory.sort(new Comparator<Apple>() {
+public int compare(Apple a1, Apple a2) {
+return a1.getWeight().compareTo(a2.getWeight());
+}
+});
+```
+    Si el granjero cambia de opinión sobre cómo ordenar las manzanas, puedes crear un Comparator ad 
+    hoc para adaptarte al nuevo requisito y pasarlo al método sort. Los detalles internos sobre cómo
+    ordenar quedan abstractos. Con una expresión lambda, se vería así:
+```java
+inventory.sort(
+(Apple a1, Apple a2) -> a1.getWeight().compareTo(a2.getWeight()));
+```
+    Nuevamente, no te preocupes por esta nueva sintaxis por ahora; el próximo capítulo cubre en 
+    detalle cómo escribir y usar expresiones lambda.
+
+    EJECUTAR UN BLOQUE DE CODIGO CON RUNNABLE
+    Los hilos en Java permiten que un bloque de código se ejecute de forma concurrente con el resto 
+    del programa. Pero ¿cómo le indicas a un hilo qué bloque de código debe ejecutar? Varios hilos 
+    pueden ejecutar código diferente. Lo que necesitas es una forma de representar un fragmento de 
+    código para ejecutarlo más tarde. Hasta Java 8, solo se podían pasar objetos al constructor de 
+    Thread, por lo que el patrón de uso típico era engorroso: pasar una clase anónima que contuviera
+    un método run que devolviera void (sin resultado). Estas clases anónimas implementan la interfaz 
+    Runnable.
+    En Java, puedes usar la interfaz Runnable para representar un bloque de código que se ejecutará;
+    ten en cuenta que este código no devuelve ningún valor (void):
+```java
+// java.lang.Runnable
+public interface Runnable {
+    void run();
+}
+```
+    Puedes usar esta interfaz para crear hilos con el comportamiento que elijas, de la siguiente 
+    manera:
+```java
+Thread t = new Thread(new Runnable() {
+    public void run() {
+    System.out.println("Hello world");
+    } 
+});
+```
+    Pero desde Java 8 puedes usar una expresión lambda, por lo que la llamada a Thread se vería así:
+```java
+Thread t = new Thread(() -> System.out.println("Hello world"));
+```
+    DEVOLVER UN RESULTADO USANDO CALLABLE
+    Es posible que estés familiarizado con la abstracción ExecutorService introducida en Java 5. La 
+    interfaz ExecutorService separa cómo se envían y ejecutan las tareas. Lo útil, en comparación 
+    con el uso de hilos y Runnable, es que al usar un ExecutorService puedes enviar una tarea a un 
+    grupo de hilos y almacenar su resultado en un Future. No te preocupes si esto te resulta 
+    desconocido; volveremos a este tema en capítulos posteriores cuando tratemos la concurrencia con
+    más detalle. Por ahora, todo lo que necesitas saber es que la interfaz Callable se utiliza para 
+    modelar una tarea que devuelve un resultado. Puedes verla como una versión mejorada de Runnable.
+```java
+// java.util.concurrent.Callable
+public interface Callable<V> {
+    V call();
+}
+```
+    Puedes usarlo, de la siguiente manera, enviando una tarea a un servicio de ejecución. Aquí 
+    devuelves el nombre del hilo que es responsable de ejecutar la tarea:
+```java
+ExecutorService executorService = Executors.newCachedThreadPool();
+Future<String> threadName = executorService.submit(new Callable<String>() {
+    @Override
+    public String call() throws Exception {
+        return Thread.currentThread().getName();
+    }
+});
+```
+    Usando una expresión lambda, este código se simplifica a lo siguiente:
+```java
+Future<String> threadName = executorService.submit(
+                    () -> Thread.currentThread().getName());
+```
+    MANEJO DE EVENTOS EN GUI
+    Un patrón típico en la programación de interfaces gráficas (GUI) es realizar una acción en 
+    respuesta a un evento determinado, como hacer clic o pasar el cursor sobre un texto. Por ejemplo,
+    si el usuario hace clic en el botón Enviar, es posible que desees mostrar una ventana emergente 
+    o registrar la acción en un archivo. Una vez más, necesitas una forma de adaptarte a cambios; 
+    deberías poder realizar cualquier respuesta. En JavaFX, puedes usar un EventHandler para 
+    representar una respuesta a un evento pasándolo a setOnAction:
+```java
+Button button = new Button("Send");
+button.setOnAction(new EventHandler<ActionEvent>() {
+    public void handle(ActionEvent event) {
+        label.setText("Sent!!");
+    }
+});
+```
+    Aquí, el comportamiento del método setOnAction se parametriza con objetos EventHandler. Con una 
+    expresión lambda, se vería así:
+```java
+button.setOnAction((ActionEvent event) -> label.setText("Sent!!"));
+```
+RESUMEN
+* La parametrización del comportamiento es la capacidad de un método para recibir múltiples 
+    comportamientos diferentes como parámetros y usarlos internamente para lograr distintas acciones.
+* Esta técnica permite que tu código sea más adaptable a requisitos cambiantes y reduce el esfuerzo 
+   de desarrollo futuro.
+* Pasar código como argumento es una forma de proporcionar nuevos comportamientos a un método. Antes
+  de Java 8, esto era verboso; las clases anónimas ayudaron a reducir parte de esta verbosidad al evitar declarar múltiples clases concretas para interfaces usadas una sola vez.
+* La API de Java contiene muchos métodos que pueden parametrizarse con diferentes comportamientos, 
+  como ordenamiento, hilos y manejo de eventos GUI.
