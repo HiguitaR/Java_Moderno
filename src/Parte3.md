@@ -211,3 +211,134 @@ public interface Nothing {
     interna anónima, aunque es más engorrosa: proporcionas una implementación y la instancias 
     directamente en línea. El siguiente código es válido porque Runnable es una interfaz funcional que
     define un único método abstracto, run:
+```java
+Runnable r1 = () -> System.out.println("Hello World 1"); //Uso de una lambda
+Runnable r2 = new Runnable() {      //Uso de una clase anonima
+    public void run() {
+        System.out.println("Hello World 2");
+    }
+};
+public static void process(Runnable r) {
+    r.run();
+}
+process(r1);    //imprime "Hello World 1"
+process(r2);    //imprime "Hello World 2"
+process(() -> System.out.println("Hello World 3")); //imprime "Hello World 3"
+```
+
+    Descripcion Funcional
+    La firma del método abstracto de la interfaz funcional describe la firma de la expresión lambda.
+    A este método abstracto lo llamamos descriptor de función. Por ejemplo, la interfaz Runnable puede
+    verse como la firma de una función que no acepta ningún parámetro y no devuelve nada (void), porque
+    tiene un único método abstracto llamado run, que no acepta parámetros y no devuelve nada (void).
+
+    Utilizamos una notación especial a lo largo de este capítulo para describir las firmas de las 
+    expresiones lambda y de las interfaces funcionales. La notación () -> void representa una función 
+    con una lista de parámetros vacía que devuelve void. Esto es exactamente lo que representa la 
+    interfaz Runnable. Como otro ejemplo, (Apple, Apple) -> int denota una función que toma dos objetos 
+    Apple como parámetros y devuelve un entero (int). Proporcionaremos más información sobre los 
+    descriptores de función más adelante en el capítulo.
+
+    Quizás ya te estés preguntando cómo se verifica el tipo de las expresiones lambda. Explicamos con 
+    detalle cómo el compilador comprueba si una lambda es válida en un contexto determinado. Por 
+    ahora, basta con entender que una expresión lambda se puede asignar a una variable o pasar a un 
+    método que espera una interfaz funcional como argumento, siempre que la expresión lambda tenga la 
+    misma firma que el método abstracto de la interfaz funcional. Por ejemplo, en nuestro ejemplo 
+    anterior, podrías pasar una lambda directamente al método process de la siguiente manera:
+```java
+public void process(Runnable r) {
+    r.run();
+}
+process(() -> System.out.println("This is awesome!!"));
+```
+    Este código, al ejecutarse, imprimirá “This is awesome!!”. La expresión lambda () -> System.out.println("This is awesome!!") 
+    no toma parámetros y devuelve void. Esta es exactamente la firma del método run definido en la 
+    interfaz Runnable.
+
+    Lambdas y llamada a métodos void
+    Aunque pueda parecer extraño, la siguiente expresión lambda es válida:
+    process(() -> System.out.println("This is awesome"));
+    Después de todo, System.out.println devuelve void, por lo que claramente no es una expresión. 
+    ¿Por qué no es necesario encerrar el cuerpo entre llaves así?
+    process(() -> { System.out.println("This is awesome"); });
+    Resulta que existe una regla especial en la Especificación del Lenguaje Java: no es necesario 
+    encerrar una única llamada a un método que devuelve void entre llaves. Esta simplificación 
+    sintáctica permite una escritura más concisa cuando la lambda consiste únicamente en una invocación
+    de método void.
+
+    ¿Por qué solo se pueden pasar lambdas donde se espera una interfaz funcional?
+    Los diseñadores del lenguaje Java optaron por vincular las expresiones lambda a interfaces 
+    funcionales —es decir, interfaces con un solo método abstracto— porque esta solución encaja de forma
+    natural en el modelo existente sin añadir complejidad. No fue necesario introducir nuevos tipos 
+    de funciones en el lenguaje.
+
+    Esta decisión se basó en varios factores clave:
+    Compatibilidad y evolución: Interfaces como Runnable, Comparator o Callable ya eran ampliamente 
+    usadas antes de Java 8 y cumplen con el patrón de un solo método abstracto. Al aprovecharlas, 
+    las lambdas pudieron integrarse sin modificar APIs existentes.
+    Familiaridad: Muchos programadores ya estaban acostumbrados a usar clases anónimas con interfaces 
+    de un solo método, especialmente en manejadores de eventos.
+    Migración suave: Al no requerir cambios en el código base, se facilitó la adopción de lambdas en 
+    proyectos antiguos.
+    Simplicidad del modelo: En lugar de añadir nuevos tipos funcionales, se reutilizó un mecanismo ya 
+    conocido, manteniendo la coherencia del lenguaje.
+    La anotación @FunctionalInterface ayuda a garantizar que una interfaz mantenga esta propiedad, 
+    generando un error de compilación si se añaden más métodos abstractos.
+    
+    Quiz: ¿Dónde se pueden usar lambdas?
+    ¿Cuáles de los siguientes son usos válidos de expresiones lambda?
+    1 execute(() -> {});
+        public void execute(Runnable r) {
+            r.run();
+        }
+    2 public Callable<String> fetch() {
+        return () -> "Tricky example ;-)";
+    }
+    3 Predicate<Apple> p = (Apple a) -> a.getWeight();
+
+    Respuesta:
+    Solo 1 y 2 son válidos.
+    El primer ejemplo es válido porque la lambda () -> {} tiene la firma () -> void, que coincide con
+    el método abstracto run definido en Runnable. Aunque el cuerpo de la lambda está vacío, es 
+    sintácticamente correcto y no genera errores.
+    El segundo ejemplo también es válido. El tipo de retorno del método fetch es Callable<String>, 
+    cuyo método call() tiene la firma () -> String. La lambda () -> "Tricky example ;-)" coincide 
+    exactamente con esta firma, por lo que es compatible.
+    El tercer ejemplo es inválido porque la expresión lambda (Apple a) -> a.getWeight() tiene la firma
+    (Apple) -> Integer, mientras que el método test de Predicate<Apple> espera una firma (Apple) -> boolean.
+    Como getWeight() devuelve un entero y no un valor booleano, no se cumple la firma requerida.
+
+    ¿Qué hay sobre @FunctionalInterface?
+    La anotación @FunctionalInterface se utiliza para indicar que una interfaz está diseñada para ser
+    una interfaz funcional, es decir, que debe tener exactamente un método abstracto. Aunque no es 
+    obligatoria, es una buena práctica usarla porque:
+
+    Documentación clara: Indica a otros desarrolladores que la interfaz está destinada a usarse con 
+    expresiones lambda o referencias a métodos.
+    Verificación en tiempo de compilación: Si se añade más de un método abstracto por error, el 
+    compilador genera un error, como: "Multiple non-overriding abstract methods found", ayudando a 
+    mantener la integridad de la interfaz.
+    Una interfaz funcional puede tener métodos default, static y métodos abstractos heredados de Object
+    (como equals()), sin que afecten su estatus funcional.
+
+    Se puede comparar con la anotación @Override: no es obligatoria, pero ayuda a prevenir errores y 
+    mejora la claridad del código.
+
+    Poniendo en práctica las lambdas: el patrón execute-around
+    Veamos un ejemplo de cómo las expresiones lambda, junto con la parametrización del comportamiento,
+    pueden usarse en la práctica para hacer que el código sea más flexible y conciso. Un patrón común 
+    al procesar recursos (por ejemplo, archivos o bases de datos) consiste en abrir un recurso, 
+    realizar un procesamiento sobre él y luego cerrarlo. Las fases de configuración y limpieza siempre
+    son similares y rodean el código importante que realiza el procesamiento. Esto se conoce como el 
+    patrón execute-around.
+
+    Por ejemplo, en el siguiente código, las líneas resaltadas muestran el código repetitivo necesario
+    para leer una línea de un archivo (obsérvese también que se usa la sentencia try-with-resources 
+    de Java 7, que ya simplifica el código, ya que no es necesario cerrar el recurso explícitamente):
+```java
+public String processFile() throws IOException {
+    try (BufferedReader br = new BufferedReader(new FileReader("data.txt"))) {
+        return br.readLine();   //Esta es la línea que realiza un trabajo útil.
+    }
+}
+```
