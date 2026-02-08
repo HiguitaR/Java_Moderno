@@ -342,3 +342,111 @@ public String processFile() throws IOException {
     }
 }
 ```
+    Paso 1: Recuerda la parametrización del comportamiento
+    Este código actual es limitado. Solo puedes leer la primera línea del archivo. ¿Qué tal si 
+    quisieras devolver las dos primeras líneas, o incluso la palabra más frecuente? Idealmente, te 
+    gustaría reutilizar el código que realiza la configuración y limpieza, y decirle al método 
+    processFile que realice diferentes acciones sobre el archivo. ¿Te suena familiar? Sí, necesitas 
+    parametrizar el comportamiento de processFile. Necesitas una forma de pasar un comportamiento a 
+    processFile para que pueda ejecutar diferentes acciones usando un BufferedReader.
+
+    Pasar comportamientos es exactamente para lo que sirven las expresiones lambda. ¿Cómo debería 
+    verse el nuevo método processFile si quisieras leer dos líneas a la vez? Necesitas una lambda 
+    que tome un BufferedReader y devuelva un String. Por ejemplo, así es como imprimirías dos líneas
+    de un BufferedReader:
+```java
+String result = processFile((BufferedReader br) -> br.readLine() + br.readLine());
+```
+    Paso 2: Usa una interfaz funcional para pasar comportamientos
+    Explicamos anteriormente que las expresiones lambda solo se pueden usar en el contexto de una 
+    interfaz funcional. Necesitas crear una que coincida con la firma BufferedReader -> String y que 
+    pueda lanzar una IOException. Llamemos a esta interfaz BufferedReaderProcessor:
+```java
+@FunctionalInterface
+public interface BufferedReaderProcessor {
+    String process(BufferedReader b) throws IOException;
+}
+```
+    Ahora puedes usar esta interfaz como argumento para tu nuevo método processFile:
+```java
+public String processFile(BufferedReaderProcessor p) throws IOException {
+    …
+}
+```
+    Paso 3: ¡Ejecuta un comportamiento!
+    Cualquier expresión lambda del tipo BufferedReader -> String puede pasarse como argumento, ya 
+    que coincide con la firma del método definido en la interfaz BufferedReaderProcessor. Ahora solo
+    necesitas una forma de ejecutar el código representado por la lambda dentro del cuerpo de 
+    processFile. Recuerda, las expresiones lambda te permiten proporcionar directamente la 
+    implementación del método abstracto de una interfaz funcional, y tratan toda la expresión como 
+    una instancia de dicha interfaz. Por lo tanto, puedes llamar al método process sobre el objeto 
+    BufferedReaderProcessor dentro del cuerpo de processFile para realizar el procesamiento:
+```java
+public String processFile(BufferedReaderProcessor p) throws IOException {
+    try (BufferedReader br = new BufferedReader(new FileReader("data.txt"))) {
+        return p.process(br);  //Procesa el objeto BufferedReader
+    }
+}
+```
+    Paso 4: Pasa lambdas
+    Ahora puedes reutilizar el método processFile y procesar archivos de diferentes formas pasando 
+    diferentes lambdas.
+    A continuación, se muestra cómo procesar una línea:
+```java
+String oneLine = processFile((BufferedReader br) -> br.readLine());
+```
+    A continuación se muestra cómo procesar dos líneas:
+```java
+String twoLines = processFile((BufferedReader br) -> br.readLine() + br.readLine());
+```
+    Resume los cuatro pasos realizados para hacer el método processFile más flexible.
+    Hemos mostrado cómo puedes utilizar interfaces funcionales para pasar expresiones lambda. Pero 
+    tuviste que definir tus propias interfaces. En la siguiente sección, exploramos las nuevas 
+    interfaces que se agregaron en Java 8 que puedes reutilizar para pasar múltiples lambdas 
+    diferentes.
+
+    Usando Interfaces Funcionales:
+    1.
+```java
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+
+public String processFile() throws IOException {
+    try (BufferedReader br = new BufferedReader(new FileReader("data.txt"))){
+        return br.readLine();
+    }
+}
+```
+    2.
+```java
+import java.io.BufferedReader;
+import java.io.IOException;
+
+public interface BufferedReaderProcesor {
+    String process(BufferedReader b) throws IOException;
+}
+public String processFile(BufferedReaderProcesor p) throws IOException{
+    ---
+}
+```
+    3.
+```java
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+
+public String processFile(BufferedReaderProcessor p) throws IOException {
+    try (BufferedReader br = new BufferedReader(new FileReader("data.txt"))){
+        return p.process(br);
+    }
+}
+```
+    4.
+
+```java
+import java.io.BufferedReader;
+
+String Online = processFile((BufferedReader br) -> br.readLine());
+String twoLines = processFile((BufferedReader br) -> br.readLine() + br.readLine());
+```
