@@ -186,22 +186,7 @@ public class AppleGreenColorPredicate implements ApplePredicate {  //Selects onl
     }
 }    
 ```
-
-```mermaid
-classDiagram
-
-    class ApplePredicate {
-        <<interface>>
-        + boolean test(Apple apple)
-    }
-    
-    class AppleGreenColorPredicate
-    class AppleHeavyPredicate
-    
-    ApplePredicate <|.. AppleGreenColorPredicate
-    ApplePredicate <|.. AppleHeavyPredicate
-    
-```
+![strategies](images/part2/figure2.1.png)
 
     Puedes ver estos criterios como diferentes comportamientos para el método de filtrado. Lo que 
     acabas de hacer está relacionado con el patrón de diseño Strategy (Estrategia) 
@@ -265,20 +250,7 @@ List<Apple> redAndHeavyApples = filterApples(inventory, new AppleRedAndHeavyPred
     Esto elimina la verbosidad innecesaria.
 
     ApplePredicate Object
-```java
-public class AppleRedAndHeavyPredicate implements ApplePredicate{
-    public boolean test(Apple apple){
-        return RED.equals(apple.getColor()) && apple.getWeight() > 150;
-    }
-    
-    filterApples(inventory, "pass as arguments");
-    /*
-            Pasa una estrategia al métodos de filtro: filtra las manzanas utilizando la expresión 
-            booleana encapsulada dentro del objeto ApplePredicate. Para encapsular este fragmento de
-             código, se envuelve con una gran cantidad de código repetitivo
-     */
-}
-```
+![parameterizing](images/part2/figure2.2.png)
 
     MÚLTIPLES COMPORTAMIENTOS, UN SOLO PARÁMETRO
     Como explicamos anteriormente, la parametrización del comportamiento es muy útil porque te permite
@@ -292,21 +264,7 @@ public class AppleRedAndHeavyPredicate implements ApplePredicate{
                     return GREEN.equals(apple.getColor()); // ApplePredicate
 
     Behaivor parameterization -> 
-
-```java
-import java.util.ArrayList;
-import java.util.List;
-
-public static List<Apple> filterApples(List<Apples> inventory, ApplePredicate p) {
-    List<Apple> result = new ArrayList<>();
-    for(Apple apple : inventory){
-        if(p.test(apple)){
-            result.add(apple);
-        }
-    }
-    return result;
-}
-```
+![filterApples](images/part2/figure2.3.png)
 
     ¡Para asegurarte de que comprendes bien la idea de la parametrización del comportamiento, 
     intenta resolver el cuestionario 2.1!
@@ -365,15 +323,14 @@ public static void prettyPrintApple(List<Apple> inventory, AppleFormatter format
 prettyPrintApple(inventory, new AppleFancyFormatter());   
 ```
     Esto generará una salida similar a:
-
     Una manzana verde ligera
     Una manzana roja pesada
+
     O prueba esto:
 ```java
 prettyPrintApple(inventory, new AppleSimpleFormatter());   
 ```
     Esto generará una salida similar a:
-
     Una manzana de 80g
     Una manzana de 155g
     
@@ -381,7 +338,7 @@ prettyPrintApple(inventory, new AppleSimpleFormatter());
     requisitos, pero el proceso es verbose porque necesitas declarar múltiples clases que solo se 
     instancian una vez. Veamos cómo mejorar eso.
 
-    Afrontando la verbosidad
+## **Afrontando la verbosidad**
     Sabemos todos que una característica o concepto difícil de usar será evitado. En este momento, 
     cuando deseas pasar un nuevo comportamiento a tu método filterApples, estás obligado a declarar 
     varias clases que implementen la interfaz ApplePredicate y luego instanciar varios objetos 
@@ -507,6 +464,7 @@ public class MeaningOfThis {
     Respuesta:
     La respuesta es 5, por que 'this' se refiere al contenedor 'Runnable', no ala clase contenedora
     'MeaningOfThis'.
+
     La verbosidad en general es mala; desalienta el uso de una característica del lenguaje porque 
     lleva mucho tiempo escribir y mantener código verboso, y no es agradable de leer. Un buen código 
     debería ser fácil de entender de un vistazo. Aunque las clases anónimas reducen en cierta medida 
@@ -532,6 +490,7 @@ List<Apple> result = filterApples(inventory, (Apple apple) -> RED.equals(apple.g
     Debes admitir que este código se ve mucho más limpio que nuestros intentos anteriores. Es 
     excelente porque empieza a parecerse mucho más al enunciado del problema. Ahora ya hemos resuelto
     el problema de la verbosidad.
+![behaivor vs value](images/part2/figure2.4.png)
 
     SEPTIMO INTENTO: ABSTRACCION SOBRE EL TIPO LIST
     Hay un paso más que puedes realizar en tu camino hacia la abstracción. En este momento, el método
@@ -686,12 +645,12 @@ button.setOnAction(new EventHandler<ActionEvent>() {
 ```java
 button.setOnAction((ActionEvent event) -> label.setText("Sent!!"));
 ```
-RESUMEN
-* La parametrización del comportamiento es la capacidad de un método para recibir múltiples 
-    comportamientos diferentes como parámetros y usarlos internamente para lograr distintas acciones.
-* Esta técnica permite que tu código sea más adaptable a requisitos cambiantes y reduce el esfuerzo 
-   de desarrollo futuro.
-* Pasar código como argumento es una forma de proporcionar nuevos comportamientos a un método. Antes
-  de Java 8, esto era verboso; las clases anónimas ayudaron a reducir parte de esta verbosidad al evitar declarar múltiples clases concretas para interfaces usadas una sola vez.
-* La API de Java contiene muchos métodos que pueden parametrizarse con diferentes comportamientos, 
-  como ordenamiento, hilos y manejo de eventos GUI.
+    RESUMEN
+    * La parametrización del comportamiento es la capacidad de un método para recibir múltiples 
+        comportamientos diferentes como parámetros y usarlos internamente para lograr distintas acciones.
+    * Esta técnica permite que tu código sea más adaptable a requisitos cambiantes y reduce el esfuerzo 
+         de desarrollo futuro.
+    * Pasar código como argumento es una forma de proporcionar nuevos comportamientos a un método. Antes
+        de Java 8, esto era verboso; las clases anónimas ayudaron a reducir parte de esta verbosidad al evitar declarar múltiples clases concretas para interfaces usadas una sola vez.
+    * La API de Java contiene muchos métodos que pueden parametrizarse con diferentes comportamientos, 
+        como ordenamiento, hilos y manejo de eventos GUI.

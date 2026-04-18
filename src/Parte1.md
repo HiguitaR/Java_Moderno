@@ -34,7 +34,8 @@ cat file1 file2 | tr "[A-Z]" "[a-z]" | sort | tail -3
     pone en cola entre estaciones de procesamiento, y cada una toma un coche, lo modifica y lo pasa a 
     la siguiente estación para un procesamiento posterior. El procesamiento en estaciones separadas es 
     típicamente concurrente, aunque la cadena de montaje sea físicamente una secuencia.
-    
+![operating streams](images/part1/figure1.2.png)   
+ 
     Java 8 añade una API de Streams (nótese la 'S' mayúscula) en java.util.stream basándose en esta 
     idea; un Stream<T> es una secuencia de elementos de tipo T. Por ahora, se puede considerar como un 
     iterador avanzado. La API de Streams tiene muchos métodos que se pueden encadenar para formar un 
@@ -83,9 +84,7 @@ cat file1 file2 | tr "[A-Z]" "[a-z]" | sort | tail -3
     parametrizar el comportamiento de sus operaciones, justo como pasaste compareUsingCustomerId 
     para parametrizar el comportamiento de sort.
 
-```java
-public int compareUsingCustomerId(String inv1, String inv2){}
-```
+![passing method](images/part1/figure1.3.png)
 
     Resumimos cómo funciona esto en la sección 1.3 de este capítulo, pero dejamos los detalles 
     completos para los capítulos 2 y 3. Los capítulos 18 y 19 analizan cosas más avanzadas que 
@@ -253,6 +252,7 @@ File[] hiddenFiles = new File(".").listFiles(File::isHidden);
     un concepto más rico: las funciones como valores, incluyendo lambdas (o funciones anónimas). Por
     ejemplo, puedes escribir (int x) -> x + 1 para expresar "la función que, al recibir un argumento 
     x, devuelve x + 1".
+![passing method](images/part1/figure1.4.png)
 
     Podrías preguntarte por qué es necesario, ya que podrías definir un método add1 en una clase 
     MyMathsUtils y usar MyMathsUtils::add1. Sí, es posible, pero la sintaxis lambda es más concisa 
@@ -261,19 +261,6 @@ File[] hiddenFiles = new File(".").listFiles(File::isHidden);
     Los programas que usan estos conceptos se consideran escritos en estilo de programación funcional,
     lo que significa "escribir programas que pasan funciones como valores de primera clase".
 
-```java
-//Old way of filtering hidden files
-File[] hiddenFiles = new File(".").listFiles(new FileFilter() {
-            public boolean accept(File file) {
-                return file.isHidden();
-            }  //Filtering files with the isHidden method requires wrapping the method inside a FileFilter
-                //object before passing it to the File.listFiles method.
-        });
-
-//Java 8 style
-File[] hiddenFiles = new File(".").listFiles(File::isHidden);
-// In Java 8 you can pass the isHidden function to the listFiles method using the method reference :: syntax.
-```
 
 ## **Pasar código: un ejemplo**
     Veamos un ejemplo de cómo esto te ayuda a escribir programas (analizado con más detalle en el 
@@ -461,7 +448,7 @@ Map<Currency, List<Transaction>> transactionsByCurrencies =
     deberían poder procesar los datos ocho veces más rápido que con un solo núcleo, ya que trabajan 
     en paralelo.
 
-## **Ordenadores multinúcleo**
+    Ordenadores multinúcleo
     Todos los ordenadores de sobremesa y portátiles nuevos son ordenadores multinúcleo. En lugar de 
     tener una sola CPU, cuentan con cuatro, ocho o más CPUs (normalmente llamadas núcleos). El 
     problema es que un programa clásico en Java utiliza solo uno de estos núcleos, desperdiciando el
@@ -486,6 +473,7 @@ Map<Currency, List<Transaction>> transactionsByCurrencies =
     entender que un modelo secuencial paso a paso. Por ejemplo, la figura 1.5 muestra un posible 
     problema con dos hilos intentando añadir un número a una variable compartida sum si no están 
     sincronizados correctamente.
+![possible problem](images/part1/figure1.5.png)
 
     Java 8 aborda ambos problemas (el código repetitivo y la complejidad al procesar colecciones, y 
     la dificultad para aprovechar los multicore) con la API Streams (java.util.stream). El primer 
@@ -501,6 +489,7 @@ Map<Currency, List<Transaction>> transactionsByCurrencies =
     CPUs luego filtran sus respectivas mitades de la lista (2). Finalmente (3), una CPU combinaría 
     los dos resultados. (Esto está estrechamente relacionado con cómo Google realiza búsquedas tan 
     rápidamente, utilizando muchos más de dos procesadores).
+![filter](images/part1/figure1.6.png)
 
     Por ahora, simplemente diremos que la nueva API Streams se comporta de forma similar a la API de
     Colecciones existente en Java: ambas proporcionan acceso a secuencias de elementos de datos. Pero
