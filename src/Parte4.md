@@ -303,3 +303,311 @@ una lista.
 
 Observa cómo el código que describimos es diferente de lo que escribirías si fueras a procesar la 
 lista de elementos del menú paso a paso. Primero, usas un estilo mucho más declarativo.
+
+![figure 4.2](images/part4/figure4.2.png)
+
+para procesar los datos en el menú donde dices lo que necesita hacerse: "Encontrar los nombres de 
+tres platos con alto contenido calórico." No implementas las funcionalidades de filtrado (filter), 
+extracción (map) o truncamiento (limit); están disponibles a través de la librería de Streams. Como 
+resultado, la API de Streams tiene más flexibilidad para decidir cómo optimizar este canal. Por 
+ejemplo, los pasos de filtrado, extracción y truncamiento podrían fusionarse en un único recorrido y
+detenerse tan pronto como se encuentren tres platos. Mostramos un ejemplo para demostrar eso en el 
+próximo capítulo.
+Demos un paso atrás y examinemos las diferencias conceptuales entre la API de Collections y la nueva
+API de Streams antes de explorar con más detalle qué operaciones puedes realizar con un stream.
+
+## 4.3 Streams vs. colecciones
+Tanto la noción existente de colecciones en Java como la nueva noción de streams proporcionan 
+interfaces a estructuras de datos que representan un conjunto secuenciado de valores del tipo de 
+elemento. Por secuenciado, queremos decir que comúnmente recorremos los valores en orden en lugar de
+acceder a ellos aleatoriamente en cualquier orden. ¿Cuál es la diferencia?
+Comenzaremos con una metáfora visual. Considera una película almacenada en un DVD. Esto es una 
+colección (quizás de bytes o de fotogramas, no nos importa cuál aquí) porque contiene toda la 
+estructura de datos. Ahora considera ver el mismo video cuando se transmite por internet. Esto ahora
+es un stream (de bytes o fotogramas). El reproductor de video en streaming solo necesita haber 
+descargado unos pocos fotogramas por adelantado de donde el usuario está viendo, por lo que puedes 
+comenzar a mostrar valores desde el inicio del stream antes de que la mayoría de los valores en el 
+stream hayan sido calculados (considera transmitir un partido de fútbol en vivo). Ten en cuenta 
+particularmente que el reproductor de video puede carecer de memoria para almacenar todo el stream 
+en memoria como una colección, y el tiempo de inicio sería terrible si tuvieras que esperar a que 
+aparezca el fotograma final antes de poder comenzar a mostrar el video. Podrías elegir, por razones
+de implementación del reproductor de video, almacenar una parte de un stream en una colección, pero
+esto es distinto de la diferencia conceptual.
+En términos más generales, la diferencia entre colecciones y streams tiene que ver con cuándo se 
+calculan las cosas. Una colección es una estructura de datos en memoria que contiene todos los valores
+que la estructura de datos tiene actualmente; cada elemento en la colección debe calcularse antes de
+poder agregarse a la colección. (Puedes agregar cosas y eliminarlas de la colección, pero en cada 
+momento, cada elemento en la colección se almacena en memoria; los elementos deben calcularse antes 
+de formar parte de la colección.)
+Por el contrario, un stream es una estructura de datos conceptualmente fija (no puedes agregar ni 
+eliminar elementos de él) cuyos elementos se calculan bajo demanda. Esto da lugar a importantes 
+beneficios de programación. En el capítulo 6, mostraremos lo simple que es construir un stream que
+contenga todos los números primos (2, 3, 5, 7, 11, ...) aunque haya un número infinito de ellos. La
+idea es que un usuario extraerá solo los valores que requiere de un stream y estos elementos se 
+producen, de forma invisible para el usuario, solo cuando se necesitan. Esta es una forma de relación
+productor-consumidor.
+Otra visión es que un stream es como una colección construida de forma perezosa: los valores se 
+calculan cuando son solicitados por un consumidor (en términos de gestión esto es orientado a la 
+demanda, o incluso fabricación justo a tiempo).
+Por el contrario, una colección se construye de forma ansiosa (orientada al proveedor: llena tu 
+almacén antes de comenzar a vender, como una novedad navideña que tiene una vida limitada). Imagina
+aplicar esto al ejemplo de los números primos. Intentar construir una colección de todos los números
+primos resultaría en un bucle de programa que calcula infinitamente un nuevo número primo, 
+agregándolo a la colección, pero nunca podría terminar de hacer la colección, por lo que el consumidor
+nunca podría verla.
+La figura 4.3 ilustra la diferencia entre un stream y una colección, aplicada a nuestro ejemplo de 
+DVD versus streaming por internet.
+Otro ejemplo es una búsqueda en internet del navegador. Supón que buscas una frase con muchas 
+coincidencias en Google o en una tienda en línea de comercio electrónico. En lugar de esperar a que 
+se descargue toda la colección de resultados junto con sus fotografías, obtienes un stream cuyos 
+elementos son las 10 o 20 mejores coincidencias, junto con un botón para hacer clic en las siguientes
+10 o 20. Cuando tú, el consumidor, haces clic en las siguientes 10, el proveedor las calcula bajo 
+demanda, antes de retornarlas a tu navegador para mostrarlas.
+
+![figure 4.3](images/part4/figure4.3.png)
+
+### 4.3.1 Traversable solo una vez
+Ten en cuenta que, de manera similar a los iteradores, un stream solo puede recorrerse una vez. 
+Después de eso se dice que el stream ha sido consumido. Puedes obtener un nuevo stream de la fuente
+de datos inicial para recorrerlo nuevamente como lo harías con un iterador (asumiendo que es una 
+fuente repetible como una colección; si es un canal de E/S, no tendrás suerte). Por ejemplo, el 
+siguiente código lanzaría una excepción indicando que el stream ha sido consumido:
+```java
+List<String> title = Arrays.asList("Modern", "Java", "In", "Action");
+Stream<String> s = title.stream();
+s.forEach(System.out::println); //Imprime cada palabra del título.
+s.forEach(System.out::println); //java.lang.IllegalStateException: el stream ya ha sido operado o cerrado.
+```
+¡Ten en cuenta que solo puedes consumir un stream una vez!
+
+#### Streams y colecciones filosóficamente
+Para los lectores a los que les gustan los puntos de vista filosóficos, puedes ver un stream como un
+conjunto de valores distribuidos en el tiempo. Por el contrario, una colección es un conjunto de 
+valores distribuidos en el espacio (aquí, la memoria del computador), que todos existen en un único 
+punto en el tiempo, y a los que accedes usando un iterador para acceder a los miembros dentro de un 
+bucle for-each.
+
+Otra diferencia clave entre las colecciones y los streams es cómo gestionan la iteración sobre los 
+datos.
+
+### 4.3.2 Iteración externa vs. interna
+Usar la interfaz Collection requiere que el usuario realice la iteración (por ejemplo, usando 
+for-each); esto se llama iteración externa. La librería de Streams, por el contrario, usa iteración 
+interna: realiza la iteración por ti y se encarga de almacenar el valor del stream resultante en 
+algún lugar; simplemente proporcionas una función que indica qué se debe hacer.
+Los siguientes listados de código ilustran esta diferencia.
+
+Listado 4.1 Colecciones: iteración externa con un bucle for-each
+```java
+List<String> names = new ArrayList<>();
+    for(Dish dish: menu) { //Itera explícitamente la lista del menú de forma secuencial.
+        names.add(dish.getName()); //Extrae el nombre y lo agrega a un acumulador.
+}
+```
+Ten en cuenta que el for-each oculta parte de la complejidad de la iteración. La construcción for-each
+es azúcar sintáctica que se traduce en algo mucho más feo usando un objeto Iterator.
+
+Listado 4.2 Colecciones: iteración externa usando un iterador entre bastidores.
+```java
+List<String> names = new ArrayList<>();
+Iterator<String> iterator = menu.iterator();
+    while(iterator.hasNext()){ //itera explicitamente
+        Dish dish = iterator.next();
+        names.add(dish.getName());
+}
+```
+
+Listado 4.3 Streams: iteración interna.
+```java
+List<String> names = menu.stream()
+        .map(Dish::getName) //Parametriza map con el metodo getName para extraer el nombre de un plato.
+        .collect(toList()); //Inicia la ejecución del canal de operaciones; sin iteración.
+```
+Usemos una analogía para entender las diferencias y los beneficios de la iteración interna. Digamos 
+que estás hablando con tu hija de dos años, Sofía, y quieres que ella guarde sus juguetes:
+
+    Tú: "Sofía, vamos a guardar los juguetes. ¿Hay algún juguete en el suelo?"
+    Sofía: "Sí, la pelota."
+    Tú: "Bien, pon la pelota en la caja. ¿Hay algo más?"
+    Sofía: "Sí, está mi muñeca."
+    Tú: "Bien, pon la muñeca en la caja. ¿Hay algo más?"
+    Sofía: "Sí, está mi libro."
+    Tú: "Bien, pon el libro en la caja. ¿Hay algo más?"
+    Sofía: "No, nada más."
+    Tú: "Perfecto, hemos terminado."
+
+Esto es exactamente lo que haces todos los días con tus colecciones de Java. Iteras una colección 
+externamente, extrayendo y procesando los elementos uno por uno de forma explícita. Sería mucho mejor
+si pudieras decirle a Sofía: "Pon todos los juguetes que están en el suelo dentro de la caja."
+Hay otras dos razones por las que la iteración interna es preferible: primero, Sofía podría elegir 
+tomar la muñeca con una mano y la pelota con la otra al mismo tiempo, y segundo, podría decidir tomar
+los objetos más cercanos a la caja primero y luego los demás. De la misma manera, usando una iteración
+interna, el procesamiento de los elementos podría realizarse de forma transparente en paralelo o en 
+un orden diferente que podría estar más optimizado.
+Estas optimizaciones son difíciles si iteras la colección externamente como estás acostumbrado a 
+hacer en Java. Esto puede parecer un detalle insignificante, pero es gran parte de la razón de ser 
+de la introducción de streams en Java 8. La iteración interna en la librería de Streams puede elegir
+automáticamente una representación de datos e implementación de paralelismo que se adapte a tu 
+hardware. Por el contrario, una vez que hayas elegido la iteración externa escribiendo for-each, te 
+has comprometido a gestionar cualquier paralelismo por tu cuenta. (Gestionarlo por tu cuenta en la 
+práctica significa "algún día paralelizaremos esto" o "comenzando la larga y ardua batalla que 
+involucra tareas y synchronized.") Java 8 necesitaba una interfaz como Collection pero sin iteradores,
+de ahí Stream. La figura 4.4 ilustra la diferencia entre un stream (iteración interna) y una colección
+(iteración externa).
+
+![figure 4.4](images/part4/figure4.4.png)
+
+Hemos descrito las diferencias conceptuales entre las colecciones y los streams. Específicamente, los
+streams hacen uso de la iteración interna, donde una librería se encarga de iterar por ti. Pero esto 
+solo es útil si tienes una lista de operaciones predefinidas con las que trabajar (por ejemplo, filter
+o map) que ocultan la iteración. La mayoría de estas operaciones toman expresiones lambda como 
+argumentos, por lo que puedes parametrizar su comportamiento como mostramos en el capítulo anterior.
+Los diseñadores del lenguaje Java enviaron la API de Streams con una extensa lista de operaciones 
+que puedes usar para expresar consultas complejas de procesamiento de datos. Veremos brevemente esta
+lista de operaciones ahora y las exploraremos con más detalle con ejemplos en el próximo capítulo. 
+Para comprobar tu comprensión de la iteración externa versus la interna, intenta el ejercicio 4.1 a 
+continuación.
+
+### Ejercicio 4.1: Iteración externa vs. interna
+Basándote en lo que aprendiste sobre la iteración externa en los listados 4.1 y 4.2, ¿qué operación 
+de stream usarías para refactorizar el siguiente código?
+```java
+List<String> highCaloricDishes = new ArrayList<>();
+Iterator<String> iterator = menu.iterator();
+while(iterator.hasNext()) {
+    Dish dish = iterator.next();
+        if(dish.getCalories() > 300) {
+            highCaloricDishes.add(d.getName());
+    }
+```
+Respuesta: Necesitas usar el patrón filter.
+```java
+List<String> highCaloricDish =
+    menu.stream()
+        .filter(dish -> dish.getCalories() > 300)
+        .collect(toList());
+```
+No te preocupes si todavía no estás familiarizado con cómo escribir precisamente una consulta de 
+stream, aprenderás esto con más detalle en el próximo capítulo.
+
+## 4.4 Operaciones de stream
+La interfaz de streams en java.util.stream.Stream define muchas operaciones. Pueden clasificarse en
+dos categorías. Volvamos a ver nuestro ejemplo anterior:
+```java
+List<String> names = menu.stream() //Obtiene un stream de la lista de platos.
+    .filter(dish -> dish.getCalories() > 300) //Operación intermedia.
+    .map(Dish::getName) //Operación intermedia.
+    .limit(3) //Operación intermedia.
+    .collect(toList()); //Convierte el Stream en una List.
+```
+Puedes ver dos grupos de operaciones:
+- filter, map y limit pueden conectarse entre sí para formar un canal.
+- collect provoca que el canal se ejecute y lo cierra.
+Las operaciones de stream que pueden conectarse se llaman operaciones intermedias, y las operaciones
+que cierran un stream se llaman operaciones terminales. La figura 4.5 destaca estos dos grupos. 
+¿Por qué es importante la distinción?
+
+### 4.4.1 Operaciones intermedias
+Las operaciones intermedias como filter o sorted retornan otro stream como tipo de retorno. Esto 
+permite que las operaciones se conecten para formar una consulta. Lo importante es que las 
+operaciones intermedias no realizan ningún procesamiento hasta que se invoca una operación terminal 
+en el canal de stream; son perezosas. Esto se debe a que las operaciones intermedias generalmente 
+pueden fusionarse y procesarse en un único recorrido por la operación terminal.
+Para entender qué sucede en el canal de stream, modifica el código para que cada lambda también 
+imprima el plato actual que está procesando. (Como muchas técnicas de demostración y depuración, esto
+es un estilo de programación terrible para el código en producción, pero explica directamente el orden
+de evaluación cuando estás aprendiendo.)
+```java
+List<String> names =
+    menu.stream()
+        .filter(dish -> {
+            System.out.println("filtering:" + dish.getName());
+            return dish.getCalories() > 300;
+        })
+        .map(dish -> {
+            System.out.println("mapping:" + dish.getName());
+            return dish.getName();
+        })
+        .limit(3)
+        .collect(toList());
+System.out.println(names);
+```
+Este código, cuando se ejecuta, imprimirá lo siguiente:
+```html
+filtering:pork
+mapping:pork
+filtering:beef
+mapping:beef
+filtering:chicken
+mapping:chicken
+[pork, beef, chicken]
+```
+Al hacer esto, puedes notar que la librería de Streams realiza varias optimizaciones aprovechando la
+naturaleza perezosa de los streams. Primero, a pesar de que muchos platos tienen más de 300 calorías,
+¡solo se seleccionan los tres primeros! Esto se debe a la operación limit y una técnica llamada 
+cortocircuito, como explicaremos en el próximo capítulo.
+Segundo, a pesar de que filter y map son dos operaciones separadas, se fusionaron en el mismo 
+recorrido (los expertos en compiladores llaman a esta técnica fusión de bucles).
+
+### 4.4.2 Operaciones terminales
+Las operaciones terminales producen un resultado a partir de un canal de stream. Un resultado es 
+cualquier valor que no sea un stream, como una List, un Integer o incluso void. Por ejemplo, en el 
+siguiente canal, forEach es una operación terminal que retorna void y aplica una lambda a cada plato
+en la fuente. Pasar System.out.println a forEach le pide que imprima cada Dish en el stream creado a
+partir del menú:
+```java
+menu.stream().forEach(System.out::println);
+```
+Para comprobar tu comprensión de las operaciones intermedias versus las terminales, intenta el 
+ejercicio 4.2.
+
+### Ejercicio 4.2: Operaciones intermedias vs. terminales
+En el canal de stream que sigue, ¿puedes identificar las operaciones intermedias y terminales?
+```java
+long count = menu.stream()
+                    .filter(dish -> dish.getCalories() > 300)
+                    .distinct()
+                    .limit(3)
+                    .count();
+```
+### Respuesta:
+La última operación en el canal de stream count retorna un long, que es un valor que no es un stream.
+Por lo tanto, es una operación terminal. Todas las operaciones anteriores, filter, distinct y limit,
+están conectadas y retornan un stream. Por lo tanto, son operaciones intermedias.
+
+### 4.4.3 Trabajando con streams
+Para resumir, trabajar con streams en general implica tres elementos:
+- Una fuente de datos (como una colección) sobre la que realizar una consulta
+- Una cadena de operaciones intermedias que forman un canal de stream
+- Una operación terminal que ejecuta el canal de stream y produce un resultado
+
+La idea detrás de un canal de stream es similar al patrón builder 
+(ver http://en.wikipedia.org/wiki/Builder_pattern). En el patrón builder, hay una cadena de llamadas
+para establecer una configuración (para los streams esto es una cadena de operaciones intermedias), 
+seguida de una llamada a un método build (para los streams esto es una operación terminal).
+Para mayor comodidad, las tablas 4.1 y 4.2 resumen las operaciones de stream intermedias y terminales
+que has visto en los ejemplos de código hasta ahora. ¡Ten en cuenta que esta es una lista incompleta
+de operaciones proporcionadas por la API de Streams; verás varias más en el próximo capítulo!
+
+![table 4.1](images/part4/table4.1.png)
+
+## 4.5 Hoja de ruta
+En el próximo capítulo, detallaremos las operaciones de stream disponibles con casos de uso para que
+puedas ver qué tipos de consultas puedes expresar con ellas. Veremos muchos patrones como filtrado, 
+segmentación, búsqueda, coincidencia, mapeo y reducción, que pueden usarse para expresar consultas 
+sofisticadas de procesamiento de datos.
+El capítulo 6 luego explora los collectors en detalle. En este capítulo solo hemos usado la operación
+terminal collect() en los streams (ver tabla 4.2) en la forma estilizada de collect(toList()), que 
+crea una List cuyos elementos son los mismos que los del stream al que se aplica.
+
+### Resumen
+- Un stream es una secuencia de elementos de una fuente que soporta operaciones de procesamiento de 
+datos.
+- Los streams hacen uso de la iteración interna: la iteración se abstrae a través de operaciones como 
+filter, map y sorted.
+- Hay dos tipos de operaciones de stream: intermedias y terminales.
+- Las operaciones intermedias como filter y map retornan un stream y pueden encadenarse entre sí. Se 
+usan para configurar un canal de operaciones pero no producen ningún resultado.
+- Las operaciones terminales como forEach y count retornan un valor que no es un stream y procesan un
+canal de stream para retornar un resultado.
+- Los elementos de un stream se calculan bajo demanda ("de forma perezosa").
