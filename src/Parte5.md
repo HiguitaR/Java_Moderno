@@ -790,3 +790,508 @@ para especificar qué clave comparar al calcular el mínimo o máximo:
 Optional<Transaction> smallestTransaction =
     transactions.stream().min(comparing(Transaction::getValue));
 ```
+## 5.7 Streams numéricos
+Viste anteriormente que podías usar el método reduce para calcular la suma de los elementos de un 
+stream. Por ejemplo, puedes calcular el número de calorías en el menú de la siguiente manera:
+```java
+int calories = menu.stream()
+                    .map(Dish::getCalories)
+                    .reduce(0, Integer::sum);
+```
+
+Claude responded: El problema con este código es que hay un costo de boxing insidioso.
+El problema con este código es que hay un costo de boxing insidioso. Detrás de escena, cada Integer
+necesita ser convertido mediante unboxing a un primitivo antes de realizar la suma. Además, ¿no sería
+mejor si pudieras llamar a un método sum directamente de la siguiente manera?
+
+```java
+int calories = menu.stream()
+                    .map(Dish::getCalories)
+                    .sum();
+```
+Pero esto no es posible. El problema es que el método map genera un Stream<T>. Aunque los elementos 
+del stream son de tipo Integer, la interfaz de streams no define un método sum. ¿Por qué no? Supón 
+que solo tuvieras un Stream<Dish> como el menú; no tendría ningún sentido poder sumar platos. Pero 
+no te preocupes; la API de Streams también proporciona especializaciones de streams primitivos que 
+soportan métodos especializados para trabajar con streams de números.
+
+### 5.7.1 Especializaciones de streams primitivos
+Java 8 introduce tres interfaces de stream especializadas para primitivos para abordar este problema,
+IntStream, DoubleStream y LongStream, que respectivamente especializan los elementos de un stream a 
+ser int, long y double, evitando así los costos ocultos de boxing. Cada una de estas interfaces trae
+nuevos métodos para realizar reducciones numéricas comunes, como sum para calcular la suma de un 
+stream numérico y max para encontrar el elemento máximo. Además, tienen métodos para convertir de 
+vuelta a un stream de objetos cuando sea necesario. Lo que hay que recordar es que la complejidad 
+adicional de estas especializaciones no es inherente a los streams. Refleja la complejidad del
+boxing, la diferencia (basada en eficiencia) entre int e Integer y así sucesivamente.
+
+#### Mapeo a un Stream numerico
+Los métodos más comunes que usarás para convertir un stream a una versión especializada son `mapToInt`,
+`mapToDouble y mapToLong`. Estos métodos funcionan exactamente como el método map que viste 
+anteriormente, pero retornan un stream especializado en lugar de un `Stream<T>`. Por ejemplo, puedes 
+usar `mapToInt` de la siguiente manera para calcular la suma de calorías en el menú:
+```java
+int calories = menu.stream()
+                    .mapToInt(Dish::getCalories)
+                    .sum();
+```
+Claude responded: Aquí, el método mapToInt extrae todas las calorías de cada plato (representadas 
+como un Integer) y retorna un IntStream como resultado (en lugar de un Stream<I…)Aquí, el método 
+`mapToInt` extrae todas las calorías de cada plato (representadas como un Integer) y retorna un 
+`IntStream` como resultado (en lugar de un Stream<Integer>). Luego puedes llamar al método `sum`
+definido en la interfaz `IntStream` para calcular la suma de calorías. Ten en cuenta que si el 
+stream estuviera vacío, sum retornaría 0 de forma predeterminada. `IntStream` también soporta otros 
+métodos de conveniencia como max, min y average. 
+
+#### Conversion de vuelta a un Stream objeto
+De manera similar, una vez que tienes un stream numérico, puede que te interese convertirlo de vuelta
+a un stream no especializado. Por ejemplo, las operaciones de un `IntStream` están restringidas a 
+producir enteros primitivos: la operación map de un `IntStream` toma una lambda que toma un `int` y 
+produce un `int (un IntUnaryOperator)`. Pero puede que quieras producir un valor diferente como un 
+Dish. Para esto necesitas acceder a las operaciones definidas en la interfaz Streams que son más 
+generales. Para convertir de un stream primitivo a un stream general (cada int será convertido 
+mediante boxing a un Integer) puedes usar el método `boxed`, de la siguiente manera:
+```java
+IntStream intStream = menu.stream().mapToInt(Dish::getCalories); //Convierte un Stream en un stream numérico.
+Stream<Integer> stream = intStream.boxed(); //Convierte el stream numérico a un Stream.
+```
+Aprenderás en la siguiente sección que boxed es particularmente útil cuando trabajas con rangos 
+numéricos que necesitan ser convertidos mediante boxing a un stream general.
+
+#### Valores Predeterminados: OptionalInt
+El ejemplo de sum fue conveniente porque tiene un valor predeterminado: 0. Pero si quieres calcular 
+el elemento máximo en un IntStream, necesitarás algo diferente porque 0 es un resultado incorrecto. 
+¿Cómo puedes diferenciar que el stream no tiene elementos y que el máximo real es 0? Anteriormente 
+introdujimos la clase Optional, que es un contenedor que indica la presencia o ausencia de un valor.
+`Optional` puede parametrizarse con tipos de referencia como `Integer, String`, y así sucesivamente.
+También hay una versión especializada primitiva de `Optional` para las tres especializaciones de 
+streams primitivos: `OptionalInt, OptionalDouble y OptionalLong`.
+Por ejemplo, puedes encontrar el elemento máximo de un IntStream llamando al método max, que retorna
+un `OptionalInt`:
+```java
+OptionalInt maxCalories = menu.stream()
+                                .mapToInt(Dish::getCalories)
+                                .max();
+```
+Ahora puedes procesar el OptionalInt explícitamente para definir un valor predeterminado si no hay
+máximo:
+```java
+int max = maxCalories.orElse(1); //Proporciona un máximo predeterminado explícito si no hay valor.
+```
+### 5.7.2 Rangos numéricos
+Un caso de uso común cuando se trabaja con números es trabajar con rangos de valores numéricos. Por 
+ejemplo, supón que quieres generar todos los números entre 1 y 100. Java 8 introduce dos métodos 
+estáticos disponibles en `IntStream` y `LongStream` para ayudar a generar tales rangos: `range` y 
+`rangeClosed`. Ambos métodos toman el valor inicial del rango como primer parámetro y el valor final 
+del rango como segundo parámetro. Pero range es exclusivo, mientras que `rangeClosed` es inclusivo. 
+Veamos un ejemplo:
+```java
+IntStream evenNumbers = IntStream.rangeClosed(1, 100) //Representa el rango del 1 al 100.
+                            .filter(n -> n % 2 == 0); //Representa un stream de números pares del 1 al 100.
+System.out.println(evenNumbers.count()); //Represents 50 even numbers from 1 to 100
+```
+Aquí usas el método `rangeClosed` para generar un rango de todos los números del 1 al 100. Produce un
+stream para que puedas encadenar el método filter para seleccionar solo los números pares. En esta 
+etapa no se ha realizado ningún cálculo. Finalmente, llamas a count en el stream resultante. Debido 
+a que count es una operación terminal, procesará el stream y retornará el resultado 50, que es el 
+número de números pares del 1 al 100, inclusive. Ten en cuenta que, a modo de comparación, si usaras
+`IntStream.range(1, 100)` en su lugar, el resultado sería 49 números pares porque range es exclusivo.
+
+### 5.7.3 Poniendo los streams numéricos en práctica: triples pitagóricos
+Ahora veremos un ejemplo más difícil para que puedas consolidar lo que has aprendido sobre los 
+streams numéricos y todas las operaciones de stream que has aprendido hasta ahora. Tu misión, si 
+decides aceptarla, es crear un stream de triples pitagóricos.
+
+#### Triple Pitagorico
+¿Qué es un triple pitagórico? Tenemos que volver unos años atrás. En una de tus emocionantes clases 
+de matemáticas, aprendiste que el famoso matemático griego Pitágoras descubrió que ciertos triples 
+de números (a, b, c) satisfacen la fórmula a * a + b * b = c * c donde a, b y c son enteros. Por 
+ejemplo, (3, 4, 5) es un triple pitagórico válido porque 3 * 3 + 4 * 4 = 5 * 5 o 9 + 16 = 25. Hay un
+número infinito de tales triples. Por ejemplo, (5, 12, 13), (6, 8, 10) y (7, 24, 25) son todos 
+triples pitagóricos válidos. Tales triples son útiles porque describen las longitudes de los tres 
+lados de un triángulo rectángulo, como se ilustra en la figura 5.9.
+
+#### Representacion de un Triple
+¿Por dónde empiezas? El primer paso es definir un triple. En lugar de (más apropiadamente) definir 
+una nueva clase para representar un `triple`, puedes usar un array de int con tres elementos. Por 
+ejemplo, `new int[]{3, 4, 5}` para representar la `tupla (3, 4, 5)`. Ahora puedes acceder a cada 
+componente individual de la tupla usando el índice del array.
+
+#### Filtrado de buenas combinaciones
+Supongamos que alguien te proporciona los dos primeros números del triple: a y b. ¿Cómo sabes si eso
+formará una buena combinación? Necesitas verificar si la raíz cuadrada de a * a + b * b es un número
+entero. Esto se expresa en Java como Math.sqrt(aa + bb) % 1 == 0. (Dado un número de punto flotante,
+x, en Java su parte fraccional se obtiene usando x % 1.0, y los números enteros como 5.0 tienen parte
+fraccional cero.) Nuestro código usa esta idea en una operación filter (verás cómo usar esto más 
+adelante para formar código válido):
+
+![figure 5.9](images/part5/figure5.9.png)
+
+```java
+filter(b -> Math.sqrt(a*a + b*b) % 1 == 0)
+```
+Asumiendo que el código circundante ha dado un valor para a, y asumiendo que stream proporciona 
+posibles valores para b, filter seleccionará solo aquellos valores de b que pueden formar un triple 
+pitagórico con a.
+
+#### Generacion de Tuplas
+Después del filter, sabes que tanto a como b pueden formar una combinación correcta. Ahora necesitas
+crear un triple. Puedes usar la operación map para transformar cada elemento en un triple pitagórico
+de la siguiente manera:
+```java
+stream.filter(b -> Math.sqrt(a*a + b*b) % 1 == 0)
+                        .map(b -> new int[]{a, b, (int) Math.sqrt(a * a + b * b)});
+```
+#### Generacion de Valores para B
+¡Te estás acercando! Ahora necesitas generar valores para b. Viste que Stream.rangeClosed te permite
+generar un stream de números en un intervalo dado. Puedes usarlo para proporcionar valores numéricos
+para b, aquí del 1 al 100:
+```java
+IntStream.rangeClosed(1, 100)
+        .filter(b -> Math.sqrt(a*a + b*b) % 1 == 0)
+        .boxed()
+        .map(b -> new int[]{a, b, (int) Math.sqrt(a * a + b * b)});
+```
+Ten en cuenta que llamas a boxed después del filter para generar un `Stream<Integer>` a partir del 
+`IntStream` retornado por rangeClosed. Esto se debe a que map retorna un array de int para cada 
+elemento del stream. El método map de un `IntStream` espera que solo se retorne otro int para cada 
+elemento del stream, ¡lo cual no es lo que quieres! Puedes reescribir esto usando el método `mapToObj`
+de un `IntStream`, que retorna un stream de valores de objetos:
+```java
+IntStream.rangeClosed(1, 100)
+            .filter(b -> Math.sqrt(a*a + b*b) % 1 == 0)
+            .mapToObj(b -> new int[]{a, b, (int) Math.sqrt(a * a + b * b)});
+```
+#### Generacion de valores para A
+Hay un componente crucial que asumimos que estaba dado: el valor para a. Ahora tienes un stream que
+produce triples pitagóricos siempre que se conozca el valor a. ¿Cómo puedes solucionar esto? ¡Al 
+igual que con b, necesitas generar valores numéricos para a! La solución final es la siguiente:
+```java
+Stream<int[]> pythagoreanTriples = IntStream.rangeClosed(1, 100).boxed()
+                                            .flatMap(a -> IntStream.rangeClosed(a, 100)
+                                            .filter(b -> Math.sqrt(a*a + b*b) % 1 == 0)
+                                            .mapToObj(b ->
+                                                new int[]{a, b, (int)Math.sqrt(a * a + b * b)})
+                                            );
+```
+Bien, ¿para qué sirve el flatMap aquí? Primero, creas un rango numérico del 1 al 100 para generar 
+valores para a. Para cada valor dado de a estás creando un stream de triples. ¡Mapear un valor de a 
+a un stream de triples resultaría en un stream de streams! El método flatMap realiza el mapeo y 
+también aplana todos los streams de triples generados en un único stream. Como resultado, produces 
+un stream de triples. Ten en cuenta también que cambias el rango de b para que sea de a a 100. No 
+hay necesidad de iniciar el rango en el valor 1 porque esto crearía triples duplicados (por ejemplo,
+(3, 4, 5) y (4, 3, 5)).
+
+#### Ejecutando el codigo
+Ahora puedes ejecutar tu solución y seleccionar explícitamente cuántos triples quieres retornar del 
+stream generado usando la operación limit que viste anteriormente:
+```java
+pythagoreanTriples.limit(5)
+                    .forEach(t -> System.out.println(t[0] + ", " + t[1] + ", " + t[2]));
+```
+Esto imprimira:
+
+3, 4, 5
+
+5, 12, 13
+
+6, 8, 10
+
+7, 24, 25
+
+8, 15, 17
+
+#### ¿Puedes hacerlo mejor?
+La solución actual no es óptima porque calculas la raíz cuadrada dos veces. Una posible forma de 
+hacer tu código más compacto es generar todos los triples de la forma (aa, bb, aa+bb) y luego filtrar
+los que coincidan con tus criterios:
+```java
+Stream<double[]> pythagoreanTriples2 = 
+        IntStream.rangeClosed(1, 100).boxed()
+                .flatMap(a -> IntStream.rangeClosed(a, 100)
+                        .mapToObj(b -> new double[]{a, b, Math.sqrt(a*a + b*b)})//Produce triples.
+                        .filter(t -> t[2] % 1 == 0));//El tercer elemento de la tupla debe ser un número entero.
+```
+## 5.8 Construcción de streams
+Con suerte, a estas alturas ya estás convencido de que los streams son poderosos y útiles para 
+expresar consultas de procesamiento de datos. Pudiste obtener un stream de una colección usando el 
+método stream. Además, te mostramos cómo crear streams numéricos a partir de un rango de números. 
+¡Pero puedes crear streams de muchas más formas! Esta sección muestra cómo puedes crear un stream a 
+partir de una secuencia de valores, de un array, de un archivo e incluso de una función generativa 
+para crear streams infinitos.
+
+### 5.8.1 Streams a partir de valores
+Puedes crear un stream con valores explícitos usando el método estático Stream.of, que puede tomar 
+cualquier número de parámetros. Por ejemplo, en el siguiente código creas un stream de strings 
+directamente usando Stream.of. Luego conviertes los strings a mayúsculas antes de imprimirlos uno 
+por uno:
+```java
+Stream<String> stream = Stream.of("Modern ", "Java ", "In ", "Action");
+stream.map(String::toUpperCase).forEach(System.out::println);
+```
+Puedes obtener un stream vacío usando el método empty de la siguiente manera:
+```java
+Stream<String> emptyStream = Stream.empty();
+```
+### 5.8.2 Stream a partir de valores nullable
+En Java 9, se agregó un nuevo método que te permite crear un stream a partir de un objeto nullable. 
+Al trabajar con streams, puede que hayas encontrado una situación en la que extraíste un objeto que 
+puede ser null y luego necesita convertirse en un stream (o un stream vacío para null). Por ejemplo,
+el método System.getProperty retorna null si no existe una propiedad con la clave dada. Para usarlo
+junto con un stream, necesitarías verificar explícitamente si es null de la siguiente manera:
+```java
+String homeValue = System.getProperty("home");
+Stream<String> homeValueStream = homeValue == null ? Stream.empty() : Stream.of(value);
+```
+Usando Stream.ofNullable puedes reescribir este código de forma más simple:
+```java
+Stream<String> homeValueStream = Stream.ofNullable(System.getProperty("home"));
+```
+Este patrón puede ser particularmente útil en conjunto con `flatMap` y un stream de valores que pueden
+incluir objetos `nullable`:
+```java
+Stream<String> values = Stream.of("config", "home", "user")
+                                .flatMap(key -> Stream.ofNullable(System.getProperty(key)));
+```
+### 5.8.3 Streams a partir de arrays
+Puedes crear un stream a partir de un array usando el método estático Arrays.stream, que toma un 
+array como parámetro. Por ejemplo, puedes convertir un array de ints primitivos en un IntStream y 
+luego sumar el IntStream para producir un int, de la siguiente manera:
+```java
+int[] numbers = {2, 3, 5, 7, 11, 13};
+int sum = Arrays.stream(numbers).sum(); //La suma es 41
+```
+### 5.8.4 Streams a partir de archivos
+`La API NIO` de Java (E/S no bloqueante), que se usa para operaciones de E/S como el procesamiento 
+de un archivo, se ha actualizado para aprovechar la API de Streams. Muchos métodos estáticos en 
+java.nio.file.Files retornan un stream. Por ejemplo, un método útil es Files.lines, que retorna un 
+stream de líneas como strings de un archivo dado. Usando lo que has aprendido hasta ahora, podrías 
+usar este método para averiguar el número de palabras únicas en un archivo de la siguiente manera:
+```java
+long uniqueWords = 0;
+//Los streams son AutoCloseable por lo que no es necesario usar try-finally.
+try(Stream<String> lines = Files.lines(Paths.get("data.txt"), Charset.defaultCharset())){
+//Genera un stream de palabras.    
+uniqueWords =lines.flatMap(line ->Arrays.stream(line.split(" ")))
+        .distinct() //Remueve duplicados
+        .count(); //Cuenta el número de palabras únicas.
+}
+catch(IOException e){ //Maneja la excepción si ocurre alguna al abrir el archivo.
+}    
+```
+Usas `Files.lines` para retornar un stream donde cada elemento es una línea en el archivo dado. Esta 
+llamada está rodeada por un bloque `try/catch` porque la fuente del stream es un recurso de `E/S`. De 
+hecho, la llamada Files.lines abrirá un recurso de `E/S`, que necesita cerrarse para evitar una fuga. 
+En el pasado, necesitarías un bloque `finally` explícito para hacer esto. Convenientemente, la interfaz
+Stream implementa la interfaz `AutoCloseable`. Esto significa que la gestión del recurso se maneja por
+ti dentro del bloque try. Una vez que tienes un stream de líneas, puedes dividir cada línea en 
+palabras llamando al método split sobre la línea. Observa cómo usas `flatMap` para producir un único 
+stream aplanado de palabras en lugar de múltiples streams de palabras para cada línea. Finalmente, 
+cuentas cada palabra distinta en el stream encadenando los métodos distinct y count.
+
+### 5.8.5 Streams a partir de funciones: ¡creando streams infinitos!
+La API de Streams proporciona dos métodos estáticos para generar un stream a partir de una función: 
+Stream.iterate y Stream.generate. Estas dos operaciones te permiten crear lo que llamamos un stream 
+infinito, un stream que no tiene un tamaño fijo como cuando creas un stream a partir de una colección
+fija. Los streams producidos por iterate y generate crean valores bajo demanda dada una función y 
+por lo tanto pueden calcular valores indefinidamente. En general, es sensato usar limit(n) en tales 
+streams para evitar imprimir un número infinito de valores.
+
+### ITERATE
+Veamos un ejemplo simple de cómo usar iterate antes de explicarlo:
+```java
+Stream.iterate(0, n -> n + 2).limit(10).forEach(System.out::println);
+```
+El método iterate toma un valor inicial, aquí 0, y una lambda (de tipo UnaryOperator<T>) para aplicar
+sucesivamente a cada nuevo valor producido. Aquí retornas el elemento anterior sumado con 2 usando 
+la lambda n -> n + 2. Como resultado, el método iterate produce un stream de todos los números pares:
+el primer elemento del stream es el valor inicial 0. Luego agrega 2 para producir el nuevo valor 2; 
+agrega 2 nuevamente para producir el nuevo valor 4 y así sucesivamente. Esta operación iterate es 
+fundamentalmente secuencial porque el resultado depende de la aplicación anterior. Ten en cuenta que
+esta operación produce un stream infinito: el stream no tiene fin porque los valores se calculan bajo
+demanda y pueden calcularse indefinidamente. Decimos que el stream es ilimitado. Como analizamos 
+anteriormente, esta es una diferencia clave entre un stream y una colección. Estás usando el método 
+limit para limitar explícitamente el tamaño del stream. Aquí seleccionas solo los primeros 10 números
+pares. Luego llamas a la operación terminal forEach para consumir el stream e imprimir cada elemento
+individualmente.
+En general, debes usar iterate cuando necesitas producir una secuencia de valores sucesivos (por 
+ejemplo, una fecha seguida de su siguiente fecha: 31 de enero, 1 de febrero, y así sucesivamente). 
+Para ver un ejemplo más difícil de cómo puedes aplicar iterate, intenta el ejercicio 5.4.
+
+#### Ejercicio 5.4: Serie de tuplas de Fibonacci
+La serie de Fibonacci es famosa como un ejercicio clásico de programación. Los números en la 
+siguiente secuencia son parte de la serie de Fibonacci: 0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55... Los 
+dos primeros números de la serie son 0 y 1, y cada número siguiente es la suma de los dos anteriores.
+La serie de tuplas de Fibonacci es similar; tienes una secuencia de un número y su sucesor en la 
+serie: (0, 1), (1, 1), (1, 2), (2, 3), (3, 5), (5, 8), (8, 13), (13, 21)...
+Tu tarea es generar los primeros 20 elementos de la serie de tuplas de Fibonacci usando el método 
+iterate.
+Déjanos ayudarte a comenzar. El primer problema es que el método iterate toma un UnaryOperator<T> 
+como argumento, y necesitas un stream de tuplas como (0, 1). Puedes, de nuevo de manera bastante 
+descuidada, usar un array de dos elementos para representar una tupla. Por ejemplo, new int[]{0, 1}
+representa el primer elemento de la serie de Fibonacci (0, 1). Este será el valor inicial del método
+iterate:
+```java
+Stream.iterate(new int[]{0, 1}, ???).limit(20)
+    .forEach(t -> System.out.println("(" + t[0] + "," + t[1] +")"));
+```
+En este ejercicio, necesitas descubrir el ??? resaltado en el código. Recuerda que iterate aplicará 
+la lambda dada sucesivamente.
+
+#### Respuesta:
+```java
+Stream.iterate(new int[]{0, 1},t -> new int[]{t[1], t[0]+t[1]})
+        .limit(20)
+        .forEach(t -> System.out.println("(" + t[0] + "," + t[1] +")"));
+```
+¿Cómo funciona? iterate necesita una lambda para especificar el elemento sucesor. En el caso de la 
+tupla (3, 5) el sucesor es (5, 3+5) = (5, 8). El siguiente es (8, 5+8). ¿Puedes ver el patrón? Dada 
+una tupla, el sucesor es (t[1], t[0] + t[1]). Esto es lo que especifica la siguiente lambda: 
+t -> new int[]{t[1], t[0] + t[1]}. Al ejecutar este código obtendrás la serie (0, 1), (1, 1), 
+(1, 2), (2, 3), (3, 5), (5, 8), (8, 13), (13, 21)... Ten en cuenta que si quisieras imprimir la serie
+de Fibonacci normal, podrías usar un map para extraer solo el primer elemento de cada tupla:
+```java
+Stream.iterate(new int[]{0, 1},t -> new int[]{t[1],t[0] + t[1]})
+        .limit(10)
+        .map(t -> t[0])
+        .forEach(System.out::println);
+```
+Este código producirá la serie de Fibonacci: 0, 1, 1, 2, 3, 5, 8, 13, 21, 34...
+
+En Java 9, el método iterate fue mejorado con soporte para un predicado. Por ejemplo, puedes generar
+números comenzando en 0 pero detener la iteración una vez que el número es mayor que 100:
+```java
+IntStream.iterate(0, n -> n < 100, n -> n + 4)
+        .forEach(System.out::println);
+```
+El método iterate toma un predicado como segundo argumento que te indica cuándo continuar iterando.
+Ten en cuenta que puede que pienses que puedes usar la operación filter para lograr el mismo 
+resultado:
+```java
+IntStream.iterate(0, n -> n + 4).filter(n -> n < 100)
+        .forEach(System.out::println);
+```
+Desafortunadamente ese no es el caso. De hecho, ¡este código no terminaría! La razón es que no hay 
+forma de saber en el filter que los números continúan aumentando, por lo que los sigue filtrando 
+infinitamente. Podrías resolver el problema usando takeWhile, que haría un cortocircuito en el 
+stream:
+```java
+IntStream.iterate(0, n -> n + 4).takeWhile(n -> n < 100)
+        .forEach(System.out::println);
+```
+¡Pero tienes que admitir que iterate con un predicado es un poco más conciso!
+
+#### Generate
+De manera similar al método `iterate`, el método `generate` te permite producir un stream infinito 
+de valores calculados bajo demanda. Pero generate no aplica sucesivamente una función a cada nuevo 
+valor producido. Toma una lambda de tipo `Supplier<T>` para proporcionar nuevos valores. Veamos un 
+ejemplo de cómo usarlo:
+```java
+Stream.generate(Math::random).limit(5)
+        .forEach(System.out::println);
+```
+Este código generará un stream de cinco números double aleatorios del 0 al 1. Por ejemplo, una 
+ejecución produce lo siguiente:
+```html
+0.9410810294106129
+0.6586270755634592
+0.9592859117266873
+0.13743396659487006
+0.3942776037651241
+```
+El método estático Math.random se usa como generador para nuevos valores. Nuevamente limitas el 
+tamaño del stream explícitamente usando el método limit; ¡de lo contrario el stream sería ilimitado!
+Puede que te estés preguntando si hay algo más útil que puedas hacer usando el método generate. El 
+proveedor que usamos (una referencia a método a Math.random) no tenía estado: no estaba registrando 
+ningún valor en algún lugar que pudiera usarse en cálculos posteriores. Pero un proveedor no tiene 
+que ser sin estado. Puedes crear un proveedor que almacene estado que pueda modificar y usar al 
+generar el siguiente valor del stream. Como ejemplo, mostraremos cómo también puedes crear la serie
+de Fibonacci del ejercicio 5.4 usando generate para que puedas compararla con el enfoque usando el 
+método iterate. Pero es importante tener en cuenta que un proveedor con estado no es seguro para usar
+en código paralelo. El IntSupplier con estado para Fibonacci se muestra al final de este capítulo por
+completitud, ¡pero en general debe evitarse! Analizamos el problema de las operaciones con efectos 
+secundarios y los streams paralelos con más detalle en el capítulo 7.
+Usaremos un `IntStream` en nuestro ejemplo para ilustrar código diseñado para evitar operaciones de 
+boxing. El método generate en IntStream toma un IntSupplier en lugar de un `Supplier<T>`. Por ejemplo,
+aquí está cómo generar un stream infinito de unos:
+```java
+IntStream ones = IntStream.generate(() -> 1);
+```
+Viste en el capítulo 3 que las lambdas te permiten crear una instancia de una interfaz funcional 
+proporcionando la implementación del método directamente en línea. También puedes pasar un objeto 
+explícito, de la siguiente manera, implementando el método `getAsInt` definido en la interfaz 
+`IntSupplier` (aunque esto parece innecesariamente largo, por favor tengan paciencia):
+```java
+IntStream twos = IntStream.generate(new IntSupplier(){
+    public int getAsInt(){
+        return 2;
+    }
+});
+```
+El método `generate` usará el proveedor dado y llamará repetidamente al método `getAsInt`, que siempre 
+retorna 2. Pero la diferencia entre la clase anónima usada aquí y una lambda es que la clase anónima
+puede definir estado mediante campos, que el método `getAsInt` puede modificar. Este es un ejemplo de 
+un efecto secundario. Todas las lambdas que has visto hasta ahora eran sin efectos secundarios; no 
+cambiaban ningún estado.
+Para volver a nuestras tareas de Fibonacci, lo que necesitas hacer ahora es crear un `IntSupplier` que
+mantenga en su estado el valor anterior de la serie, para que `getAsInt` pueda usarlo para calcular el
+siguiente elemento. Además, puede actualizar el estado del `IntSupplier` para la próxima vez que sea 
+llamado. El siguiente código muestra cómo crear un `IntSupplier` que retornará el siguiente elemento 
+de Fibonacci cuando sea llamado:
+```java
+IntSupplier fib = new IntSupplier(){
+    private int previous = 0;
+    private int current = 1;
+    public int getAsInt(){
+        int oldPrevious = this.previous;
+        int nextValue = this.previous + this.current;
+        this.previous = this.current;
+        this.current = nextValue;
+        return oldPrevious;
+    }
+};
+IntStream.generate(fib).limit(10).forEach(System.out::println);
+```
+El código crea una instancia de `IntSupplier`. Este objeto tiene un estado mutable: rastrea el elemento
+de Fibonacci anterior y el elemento de Fibonacci actual en dos variables de instancia. El método 
+`getAsInt` cambia el estado del objeto cuando es llamado para que produzca nuevos valores en cada 
+llamada. En comparación, nuestro enfoque usando iterate era puramente inmutable; no modificabas el 
+estado existente sino que creabas nuevas tuplas en cada iteración. Aprenderás en el capítulo 7 que 
+siempre debes preferir un enfoque inmutable para procesar un stream en paralelo y esperar un 
+resultado correcto.
+Ten en cuenta que debido a que estás tratando con un stream de tamaño infinito, tienes que limitar 
+su tamaño explícitamente usando la operación limit; de lo contrario, la operación terminal (en este 
+caso forEach) calculará indefinidamente. De manera similar, no puedes ordenar ni reducir un stream 
+infinito porque todos los elementos necesitan ser procesados, ¡pero esto tomaría tiempo indefinido 
+porque el stream contiene un número infinito de elementos!
+
+### Resumen general
+¡Ha sido un capítulo largo pero gratificante! Ahora puedes procesar colecciones de manera más 
+efectiva. De hecho, los streams te permiten expresar consultas sofisticadas de procesamiento de 
+datos de forma concisa. Además, los streams pueden paralelizarse de forma transparente.
+
+### Resumen
+- La API de Streams te permite expresar consultas complejas de procesamiento de datos. Las operaciones
+de stream comunes se resumen en la tabla 5.1.
+- Puedes filtrar y segmentar un stream usando los métodos filter, distinct, takeWhile (Java 9), 
+dropWhile (Java 9), skip y limit.
+- Los métodos takeWhile y dropWhile son más eficientes que filter cuando sabes que la fuente está 
+ordenada.
+- Puedes extraer o transformar elementos de un stream usando los métodos map y flatMap.
+- Puedes encontrar elementos en un stream usando los métodos findFirst y findAny. Puedes hacer 
+coincidir un predicado dado en un stream usando los métodos allMatch, noneMatch y anyMatch.
+- Estos métodos hacen uso del cortocircuito: un cálculo se detiene tan pronto como se encuentra un 
+resultado; no es necesario procesar todo el stream.
+- Puedes combinar todos los elementos de un stream iterativamente para producir un resultado usando el
+método reduce, por ejemplo, para calcular la suma o encontrar el máximo de un stream.
+- Algunas operaciones como filter y map son sin estado: no almacenan ningún estado. Algunas operaciones
+como reduce almacenan estado para calcular un valor. Algunas operaciones como sorted y distinct 
+también almacenan estado porque necesitan almacenar en buffer todos los elementos de un stream antes
+de retornar un nuevo stream. Tales operaciones se llaman operaciones con estado.
+- Hay tres especializaciones primitivas de streams: IntStream, DoubleStream y LongStream. Sus 
+operaciones también están especializadas en consecuencia.
+- Los streams pueden crearse no solo a partir de una colección sino también a partir de valores, 
+arrays, archivos y métodos específicos como iterate y generate.
+- Un stream infinito tiene un número infinito de elementos (por ejemplo, todos los strings posibles). 
+Esto es posible porque los elementos de un stream solo se producen bajo demanda. Puedes obtener un 
+stream finito a partir de un stream infinito usando métodos como limit.
