@@ -1,6 +1,6 @@
 # Capitulo 10
 
-# Lenguajes de dominio específico usando lambdas
+# ***Lenguajes de dominio específico usando lambdas***
 
 ### Este capítulo cubre
 - Qué son los lenguajes de dominio específico (DSLs) y sus formas

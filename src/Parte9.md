@@ -1,6 +1,6 @@
 # Capitulo 9
 
-# Refactorización, pruebas y depuración
+# ***Refactorización, pruebas y depuración***
 
 ### Este capítulo cubre
 - Refactorización de código para usar expresiones lambda

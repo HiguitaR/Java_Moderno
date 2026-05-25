@@ -1,4 +1,4 @@
-# *** Nueva API de Fecha y Hora *** 
+# ***Nueva API de Fecha y Hora*** 
 
 ### Este capítulo cubre:
 - Por qué necesitábamos una nueva biblioteca de fecha y hora, introducida en Java 8

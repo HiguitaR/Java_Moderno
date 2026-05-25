@@ -1,6 +1,7 @@
 # Parte 3
 
-# Programación efectiva con streams y lambdas
+# ***Programación efectiva con streams y lambdas***
+
 La tercera parte de este libro explora varios temas de Java 8 y Java 9 que te harán más efectivo al 
 usar Java y mejorarán tu código base con idiomás modernos. Como está orientado hacia ideas de 
 programación más avanzadas, nada más adelante en el libro depende de las técnicas descritas aquí.
@@ -15,6 +16,7 @@ El Capítulo 10 es nuevamente nuevo para la segunda edición. Explora la idea de
 DSL (Domain-Specific Language). Esta no es solo una forma poderosa de diseñar APIs, sino también una
 que está siendo cada vez más popular y ya visible en Java, como en las interfaces Comparator, Stream
 y Collector.
+---
 
 # Capitulo 8
 # Mejoras en la Collection API

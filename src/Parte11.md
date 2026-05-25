@@ -1,6 +1,6 @@
 # Parte 4
 
-# Java Cotidiano
+# ***Java Cotidiano***
 
 La cuarta parte de este libro explora varias características nuevas en Java 8 y Java 9 enfocadas en 
 facilitar y hacer más confiable la escritura de tus proyectos. Comenzamos con dos APIs introducidas 
